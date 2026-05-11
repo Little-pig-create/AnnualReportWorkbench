@@ -69,7 +69,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_installer.ps1 -Mode one
 发布前可执行：
 
 ```powershell
-python .\scripts\sync_update_manifest.py 1.0.0
+python .\scripts\sync_update_manifest.py 1.0.1
 ```
 
 这会同步以下文件：
@@ -82,12 +82,12 @@ python .\scripts\sync_update_manifest.py 1.0.0
 
 - 主下载链接 `url` / `downloadUrl`
 - `github` / `gitee` 双渠道下载地址
-- 与实际安装包一致的文件名，例如 `AnnualReportWorkbench-Setup-1.0.0-onedir.exe`
+- 与实际安装包一致的文件名，例如 `AnnualReportWorkbench-Setup-1.0.1-onedir.exe`
 
 如果已经构建出正式安装包，可顺手写入哈希：
 
 ```powershell
-python .\scripts\sync_update_manifest.py 1.0.0 --sha256-file .\dist\installer\AnnualReportWorkbench-Setup-1.0.0-onedir.exe
+python .\scripts\sync_update_manifest.py 1.0.1 --sha256-file .\dist\installer\AnnualReportWorkbench-Setup-1.0.1-onedir.exe
 ```
 
 ## 5. 双平台发布
@@ -95,7 +95,7 @@ python .\scripts\sync_update_manifest.py 1.0.0 --sha256-file .\dist\installer\An
 构建完成后，可直接把当前版本发布到 `GitHub + Gitee`：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1 -Version 1.0.0 -Prerelease -OverwriteAssets
+powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1 -Version 1.0.1 -Prerelease -OverwriteAssets
 ```
 
 默认行为：
@@ -124,11 +124,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1 -Version 
 如果你想在打包完成后清理项目根目录中的构建产物，可以执行：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.0
+powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.1
 ```
 
 只预览归档动作时可使用：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.0 -DryRun
+powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.1 -DryRun
 ```

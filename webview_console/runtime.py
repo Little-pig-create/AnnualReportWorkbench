@@ -21,7 +21,7 @@ from .error_codes import (
     SETTINGS_VALIDATION_FAILED,
     VISUALIZATION_INDEX_FAILED,
 )
-from .infra.file_ops import open_path as open_fs_path
+from .infra.file_ops import open_path as open_fs_path, resolve_project_path
 from .infra.history_store import HistoryStore
 from .infra.visualization_index import VisualizationIndexService
 from .models import Progress, RunState, STAGE_ORDER
@@ -80,8 +80,12 @@ class Runtime:
         with self._lock:
             if self._active_run_id is not None:
                 return self._error(RUN_ALREADY_ACTIVE, "Stop the current run before changing settings.")
-            self.settings = settings
-            self.config_store.save(settings)
+            try:
+                self._ensure_workspace_dirs(settings)
+                self.settings = settings
+                self.config_store.save(settings)
+            except Exception as exc:
+                return self._error(SETTINGS_VALIDATION_FAILED, str(exc))
         return self._ok({"message": "settings updated"})
 
     def get_runtime(self) -> dict[str, Any]:
@@ -362,6 +366,18 @@ class Runtime:
             "textOutputDir": str((project_root / text_output_dir).resolve() if not text_output_dir.is_absolute() else text_output_dir.resolve()),
             "stateDir": str((project_root / state_dir).resolve() if not state_dir.is_absolute() else state_dir.resolve()),
         }
+
+    def _ensure_workspace_dirs(self, settings: AppSettings) -> None:
+        workspace = settings.workspace
+        project_root = Path(workspace.projectRoot).expanduser().resolve()
+        annual_report_dir = resolve_project_path(workspace.projectRoot, workspace.annualReportDir)
+        text_output_dir = resolve_project_path(workspace.projectRoot, workspace.textOutputDir)
+        state_dir = resolve_project_path(workspace.projectRoot, workspace.stateDir)
+
+        project_root.mkdir(parents=True, exist_ok=True)
+        annual_report_dir.mkdir(parents=True, exist_ok=True)
+        text_output_dir.mkdir(parents=True, exist_ok=True)
+        state_dir.mkdir(parents=True, exist_ok=True)
 
     def _build_history_entry(self, run_state: RunState) -> dict[str, Any]:
         outputs = dict(run_state.outputs or {})

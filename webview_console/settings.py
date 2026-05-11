@@ -37,7 +37,7 @@ class PdfSettings:
 
 @dataclass(slots=True)
 class ExtractSettings:
-    concurrency: int = 2
+    concurrency: int = 8
     resetCheckpoint: bool = False
     deleteCheckpointOnSuccess: bool = False
 

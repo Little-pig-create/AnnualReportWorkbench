@@ -6,7 +6,7 @@
         <h2>路径与年份范围</h2>
         <p>这里集中配置项目路径和抓取年份范围，适合在批量运行前完成一次统一检查。</p>
       </div>
-      <button class="save-button" @click="settingsStore.save()" :disabled="settingsStore.saving">
+      <button class="save-button" @click="saveWorkspace()" :disabled="settingsStore.saving">
         {{ settingsStore.saving ? "保存中..." : "保存工作区" }}
       </button>
     </header>
@@ -28,7 +28,8 @@
             selectable
             @open="open(settings.workspace.projectRoot)"
             @select="pickDirectory('projectRoot')"
-            @update:model-value="settingsStore.touch()"
+            @update:model-value="setProjectRoot"
+            @blur="syncProjectRootDefaultsOnBlur"
           />
           <PathField
             label="年报输出目录"
@@ -159,6 +160,40 @@ function open(path: string) {
   bridge.openPath(path);
 }
 
+function toWindowsPath(path: string) {
+  return path.replace(/\//g, "\\").replace(/\\{2,}/g, "\\").trim();
+}
+
+function joinWindowsPath(root: string, child: string) {
+  const normalizedRoot = toWindowsPath(root).replace(/[\\\/]+$/, "");
+  if (!normalizedRoot) return child;
+  return `${normalizedRoot}\\${child}`;
+}
+
+function applyProjectRootDefaults(projectRoot: string, options?: { announce?: boolean }) {
+  if (!settings.value) return;
+  const normalizedRoot = toWindowsPath(projectRoot);
+  settings.value.workspace.projectRoot = normalizedRoot;
+  settings.value.workspace.annualReportDir = joinWindowsPath(normalizedRoot, "annual_reports");
+  settings.value.workspace.textOutputDir = joinWindowsPath(normalizedRoot, "txt_extract");
+  settings.value.workspace.stateDir = normalizedRoot;
+  settingsStore.touch();
+  if (options?.announce && normalizedRoot) {
+    appStore.showAlert("已按项目根目录自动填充年报目录、文本目录和状态目录。", "info", "工作区联动");
+  }
+}
+
+function setProjectRoot(value: string) {
+  if (!settings.value) return;
+  settings.value.workspace.projectRoot = toWindowsPath(value);
+  settingsStore.touch();
+}
+
+function syncProjectRootDefaultsOnBlur() {
+  if (!settings.value) return;
+  applyProjectRootDefaults(settings.value.workspace.projectRoot);
+}
+
 function resolvePath(raw: string) {
   const value = (raw || "").trim();
   if (!settings.value) return value;
@@ -178,8 +213,27 @@ async function pickDirectory(field: "projectRoot" | "annualReportDir" | "textOut
   const current = settings.value.workspace[field];
   const selected = await bridge.selectDirectory(resolvePath(current));
   if (!selected.path) return;
+  if (field === "projectRoot") {
+    applyProjectRootDefaults(selected.path, { announce: true });
+    return;
+  }
   settings.value.workspace[field] = selected.path;
   settingsStore.touch();
+}
+
+async function saveWorkspace() {
+  if (!settings.value) return;
+  await settingsStore.save();
+  if (taskStore.isBusy) {
+    appStore.showAlert("工作区已保存，当前任务运行中，首页图表会在任务结束后自动刷新。", "warning", "工作区切换");
+    return;
+  }
+  try {
+    await taskStore.reloadVisualizationForSettings(settings.value);
+    appStore.showAlert("首页图表已切换为当前工作区对应的数据。", "success", "工作区切换");
+  } catch (error) {
+    appStore.showAlert(getErrorMessage(error, "刷新首页图表失败"), "warning");
+  }
 }
 
 async function toggleDesktopNotify(enabled: boolean) {

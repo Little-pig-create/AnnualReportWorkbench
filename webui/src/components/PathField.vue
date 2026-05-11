@@ -2,7 +2,7 @@
   <label class="field">
     <span>{{ label }}</span>
     <div class="input-row">
-      <input :value="modelValue" @input="onInput" :placeholder="placeholder" />
+      <input :value="modelValue" @input="onInput" @blur="$emit('blur')" :placeholder="placeholder" />
       <div class="actions">
         <button v-if="selectable" type="button" class="secondary" @click="$emit('select')">选择</button>
         <button v-if="openable" type="button" @click="$emit('open')">打开</button>
@@ -24,6 +24,7 @@ const emit = defineEmits<{
   "update:modelValue": [value: string];
   open: [];
   select: [];
+  blur: [];
 }>();
 
 function onInput(event: Event) {

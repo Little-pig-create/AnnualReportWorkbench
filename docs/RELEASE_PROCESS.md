@@ -19,10 +19,10 @@ python -m unittest .\tests\test_release_metadata.py
 
 ## 2. 如需升级版本
 
-例如发布 `1.0.0`：
+例如发布 `1.0.1`：
 
 ```powershell
-python .\scripts\sync_update_manifest.py 1.0.0
+python .\scripts\sync_update_manifest.py 1.0.1
 python -m unittest .\tests\test_release_metadata.py
 ```
 
@@ -42,7 +42,7 @@ python -m unittest .\tests\test_release_metadata.py
 如果安装包已经生成，可补写 `sha256`：
 
 ```powershell
-python .\scripts\sync_update_manifest.py 1.0.0 --sha256-file .\dist\installer\AnnualReportWorkbench-Setup-1.0.0-onedir.exe
+python .\scripts\sync_update_manifest.py 1.0.1 --sha256-file .\dist\installer\AnnualReportWorkbench-Setup-1.0.1-onedir.exe
 ```
 
 ## 3. 前端准备
@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build_installer.ps1 -Mode one
 打包完成后，建议把本地构建产物归档，避免根目录长期堆积：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.0
+powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.1
 ```
 
 归档后会把项目根目录下的：
@@ -100,12 +100,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -La
 
 移动到：
 
-- `_archive/build_artifacts/<时间戳>_1.0.0`
+- `_archive/build_artifacts/<时间戳>_1.0.1`
 
 如需先预览归档动作：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.0 -DryRun
+powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -Label 1.0.1 -DryRun
 ```
 
 ## 7. 推荐发布顺序
@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\archive_build_outputs.ps1 -La
 双平台发布命令：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1 -Version 1.0.0 -Prerelease -OverwriteAssets
+powershell -ExecutionPolicy Bypass -File .\scripts\publish_release.ps1 -Version 1.0.1 -Prerelease -OverwriteAssets
 ```
 
 脚本默认会：

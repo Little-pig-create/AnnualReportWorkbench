@@ -49,6 +49,39 @@ class VisualizationIndexService:
         tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(path)
 
+    def _build_meta(
+        self,
+        *,
+        project_root: str,
+        annual_report_dir: Path,
+        text_output_dir: Path,
+        state_dir: Path,
+        start_year: int,
+        end_year: int,
+    ) -> dict[str, Any]:
+        return {
+            "generatedAt": _now_text(),
+            "projectRoot": str(Path(project_root).resolve()),
+            "annualReportDir": str(annual_report_dir),
+            "textOutputDir": str(text_output_dir),
+            "stateDir": str(state_dir),
+            "startYear": start_year,
+            "endYear": end_year,
+        }
+
+    def _meta_matches(self, cached_meta: Any, current_meta: dict[str, Any]) -> bool:
+        if not isinstance(cached_meta, dict):
+            return False
+        keys = (
+            "projectRoot",
+            "annualReportDir",
+            "textOutputDir",
+            "stateDir",
+            "startYear",
+            "endYear",
+        )
+        return all(cached_meta.get(key) == current_meta.get(key) for key in keys)
+
     def _count_jsonl_rows(self, path: Path) -> int:
         if not path.exists():
             return 0
@@ -148,11 +181,22 @@ class VisualizationIndexService:
         text_output_dir = resolve_project_path(project_root, workspace.textOutputDir)
         state_dir = resolve_project_path(project_root, workspace.stateDir)
         years = list(range(workspace.startYear, workspace.endYear + 1))
+        meta = self._build_meta(
+            project_root=project_root,
+            annual_report_dir=annual_report_dir,
+            text_output_dir=text_output_dir,
+            state_dir=state_dir,
+            start_year=workspace.startYear,
+            end_year=workspace.endYear,
+        )
 
         with self._lock:
-            links_years = self._read_json(self._links_path(state_dir), {})
-            pdf_years = self._read_json(self._pdf_path(state_dir), {})
-            txt_years = self._read_json(self._txt_path(state_dir), {})
+            cached_meta = self._read_json(self._meta_path(state_dir), {})
+            should_rebuild = not self._meta_matches(cached_meta, meta)
+
+            links_years = {} if should_rebuild else self._read_json(self._links_path(state_dir), {})
+            pdf_years = {} if should_rebuild else self._read_json(self._pdf_path(state_dir), {})
+            txt_years = {} if should_rebuild else self._read_json(self._txt_path(state_dir), {})
 
             if not links_years:
                 links_payload = self._count_links_by_year(annual_report_dir, years)
@@ -165,15 +209,6 @@ class VisualizationIndexService:
                 txt_years = self._count_top_level_txt_by_year(text_output_dir, years)
                 self._write_json(self._txt_path(state_dir), txt_years)
 
-            meta = {
-                "generatedAt": _now_text(),
-                "projectRoot": str(Path(project_root).resolve()),
-                "annualReportDir": str(annual_report_dir),
-                "textOutputDir": str(text_output_dir),
-                "stateDir": str(state_dir),
-                "startYear": workspace.startYear,
-                "endYear": workspace.endYear,
-            }
             self._write_json(self._meta_path(state_dir), meta)
 
         links_items = [links_years.get(str(year), {"year": year, "count": 0, "status": "pending", "active": False}) for year in years]

@@ -23,6 +23,7 @@ DEFAULT_STATE_DIR = "."
 CHECKPOINT_NAME = "text_extract_checkpoint.json"
 SUMMARY_NAME = "text_extract_summary.json"
 FAILED_SAMPLE_LIMIT = 50
+DEFAULT_EXTRACT_CONCURRENCY = 8
 LogCallback = Callable[[str, str], None]
 ProgressCallback = Callable[[dict[str, Any]], None]
 
@@ -39,7 +40,7 @@ class ExtractTextConfig:
     state_dir: Path
     start_year: Optional[int] = None
     end_year: Optional[int] = None
-    concurrency: int = 2
+    concurrency: int = DEFAULT_EXTRACT_CONCURRENCY
 
 
 @dataclass(slots=True)
@@ -407,7 +408,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-dir", default=DEFAULT_STATE_DIR, help="断点状态目录")
     parser.add_argument("--start-year", type=int, default=None, help="起始年份过滤")
     parser.add_argument("--end-year", type=int, default=None, help="结束年份过滤")
-    parser.add_argument("--concurrency", type=int, default=2, help="提取并发数")
+    parser.add_argument("--concurrency", type=int, default=DEFAULT_EXTRACT_CONCURRENCY, help="提取并发数")
     return parser
 
 

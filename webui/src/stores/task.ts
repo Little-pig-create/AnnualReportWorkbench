@@ -325,6 +325,11 @@ export const useTaskStore = defineStore("task", {
       this.visualizationIndex = await bridge.getVisualizationIndex(payload || {});
       return this.visualizationIndex;
     },
+    async reloadVisualizationForSettings(payload?: unknown) {
+      if (this.isBusy) return this.visualizationIndex;
+      this.reset();
+      return this.loadVisualizationIndex(payload);
+    },
     async loadIncrementalStatus(payload?: unknown) {
       if (this.incrementalLoading) {
         return this.incremental;

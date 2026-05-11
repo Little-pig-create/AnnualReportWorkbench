@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Create or update GitHub and Gitee releases, then upload exe assets."
     )
-    parser.add_argument("--version", help="Release version, for example 1.0.0.")
+    parser.add_argument("--version", help="Release version, for example 1.0.1.")
     parser.add_argument(
         "--target-commitish",
         default="main",
@@ -85,6 +85,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prerelease", action="store_true", help="Publish as prerelease.")
     parser.add_argument("--dry-run", action="store_true", help="Resolve inputs without calling remote APIs.")
     return parser.parse_args()
+
+
+def normalize_gitee_token(value: str) -> str:
+    token = (value or "").strip()
+    if token.lower().startswith("bearer "):
+        return token[7:].strip()
+    return token
 
 
 def parse_owner_repo(repo_url: str) -> tuple[str, str]:
@@ -437,6 +444,7 @@ def publish_gitee(
 def main() -> int:
     args = parse_args()
     version = args.version or APP_VERSION
+    args.gitee_token = normalize_gitee_token(args.gitee_token)
     release_name = args.release_name or version
     default_portable_path, default_installer_path = default_asset_paths(version)
     portable_path = Path(args.portable_asset).resolve() if args.portable_asset else default_portable_path

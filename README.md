@@ -1,27 +1,24 @@
 # Annual Report Workbench
 
-年报公告抓取、PDF 下载与文本提取的一体化桌面工作台。
+一个用于年报公告抓取、PDF 下载和文本提取的桌面工具。
 
-## 仓库
+## 项目简介
 
-- GitHub: https://github.com/Little-pig-create/AnnualReportWorkbench
-- Gitee: https://gitee.com/xiaozhusir/AnnualReportWorkbench
+这是一个基于 Python + Vue + pywebview 的桌面应用，适合批量处理年报相关数据，并在界面中查看进度、日志和历史任务。
 
-## 版本
+![Annual Report Workbench 预览图](assets/gpt-image-4.png)
 
-- 当前版本：`1.0.0`
-- 发布资产：`AnnualReportWorkbench.exe`
-- 安装包：`AnnualReportWorkbench-Setup-<version>-onedir.exe`
+应用面向年报数据处理场景，提供从公告链接抓取、PDF 下载到文本提取的完整处理链路。相比命令行脚本，它更适合需要批量运行、查看过程状态、保留历史记录和反复调参的桌面工作流。
 
-## 功能
+## 主要功能
 
 - 公告链接抓取
 - PDF 批量下载
 - PDF 文本提取
-- 单阶段运行与全流程串联
-- 任务暂停、继续与终止
-- 实时日志、进度与图表展示
-- 历史任务记录与配置同步
+- 单阶段运行和全流程串联
+- 任务暂停、继续和终止
+- 实时日志、进度和图表展示
+- 历史任务记录和配置同步
 
 ## 快速开始
 
@@ -33,13 +30,12 @@
 
 ## 常用命令
 
-- 同步版本到更新清单：`python .\scripts\sync_update_manifest.py 1.0.0`
+- 同步版本到更新清单：`python .\scripts\sync_update_manifest.py 1.0.1`
 - 构建 GUI：`powershell -ExecutionPolicy Bypass -File .\scripts\build_gui.ps1 -Mode onedir`
 - 构建安装包：`powershell -ExecutionPolicy Bypass -File .\scripts\build_installer.ps1 -Mode onedir`
 - 运行测试：`python -m unittest .\tests\test_release_metadata.py`
 
-## 说明
+## 仓库地址
 
-- 当前仓库已统一为 `Annual Report Workbench` 命名。
-- 更新链路已同步到新仓库地址与新发布文件名。
-- `config/update.json.example` 可作为更新清单模板。
+- GitHub: https://github.com/Little-pig-create/AnnualReportWorkbench
+- Gitee: https://gitee.com/xiaozhusir/AnnualReportWorkbench

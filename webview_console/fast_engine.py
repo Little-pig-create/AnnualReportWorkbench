@@ -1062,7 +1062,7 @@ async def run_pipeline_fast(
     log_callback: LogCallback | None = None,
     progress_callback: ProgressCallback | None = None,
     cancel_requested: CancelCallback | None = None,
-    extract_concurrency: int = 2,
+    extract_concurrency: int = 8,
 ) -> dict[str, Any]:
     links_summary = await run_links_fast(config, log_callback=log_callback, progress_callback=progress_callback, cancel_requested=cancel_requested)
     pdf_result = await run_pdf_download_service_fast(config, log_callback=log_callback, progress_callback=progress_callback, cancel_requested=cancel_requested)
@@ -1092,7 +1092,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--request-interval", type=float, default=0.2)
     parser.add_argument("--announcement-concurrency", type=int, default=8)
     parser.add_argument("--download-concurrency", type=int, default=12)
-    parser.add_argument("--extract-concurrency", type=int, default=2)
+    parser.add_argument("--extract-concurrency", type=int, default=8)
     parser.add_argument("--output-dir", default="annual_reports")
     parser.add_argument("--text-output-dir", default="txt_extract")
     parser.add_argument("--state-dir", default=".")
