@@ -13,6 +13,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_ROOT = Path(__file__).resolve().parent
+REQUEST_TIMEOUT_SECONDS = 900
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 if str(SCRIPT_ROOT) not in sys.path:
@@ -150,7 +151,7 @@ def request(
 ) -> tuple[object, int]:
     req = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=120) as response:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             body = response.read()
             status = response.getcode()
             if not body:
