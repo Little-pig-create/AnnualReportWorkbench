@@ -7,7 +7,7 @@
     "优化 Element Plus 按需加载与分包体积"
   ],
   "force": false,
-  "sha256": "766bc696a2318d02aed60741048d8b2fffc02f31e42cc448b4d61172b79a534b",
+  "sha256": "935b989fb311d3c88d9f71d2c430ef4ddbfecbba604e5f0811a86fa2640f6230",
   "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.0/AnnualReportWorkbench-Setup-1.0.0-onedir.exe",
   "primaryChannel": "github",
   "downloads": {
