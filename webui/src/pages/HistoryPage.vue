@@ -384,12 +384,14 @@ function stageMetrics(stage: StageState) {
     const exists = Number(metricValue(source, ["exists"]) || 0);
     const failed = Number(metricValue(source, ["failed"]) || 0);
     const skipped = Number(metricValue(source, ["skipped"]) || 0);
+    const oldAnnualReportTotal = Number(metricValue(source, ["oldAnnualReportTotal"]) || 0);
     return [
       { label: "下载完成", value: downloaded },
       { label: "已存在", value: exists },
       { label: "失败数量", value: failed },
       { label: "跳过数量", value: skipped },
-    ];
+      oldAnnualReportTotal > 0 ? { label: "Old annual reports", value: oldAnnualReportTotal } : null,
+    ].filter(Boolean) as Array<{ label: string; value: string | number }>;
   }
 
   if (stage.name === "extract") {

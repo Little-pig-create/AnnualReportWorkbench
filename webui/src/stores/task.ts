@@ -13,6 +13,7 @@ import type {
 
 const RUN_POLL_INTERVAL_MS = 600;
 const NOTIFICATION_PREFS_KEY = "report_spider_notification_prefs_v1";
+const PIPELINE_STAGE_ORDER: StageName[] = ["links", "pdf", "extract"];
 
 function modeText(mode: RunMode | null) {
   return {
@@ -91,6 +92,44 @@ function numberValue(value: any, fallback = 0) {
   return Number.isFinite(result) ? result : fallback;
 }
 
+function stagePercent(stage: StageState | null | undefined) {
+  if (!stage) return 0;
+  if (stage.status === "completed") return 1;
+  return Math.min(1, Math.max(0, Number(stage.progress?.percent || 0)));
+}
+
+function isTerminalRunStatus(status: string | null | undefined) {
+  return status === "completed" || status === "failed" || status === "cancelled";
+}
+
+function cloneStageState(stage: StageState): StageState {
+  return {
+    ...stage,
+    progress: { ...stage.progress },
+    result: stage.result ? { ...stage.result } : null,
+  };
+}
+
+function cloneStageMap(stages: Record<StageName, StageState>): Record<StageName, StageState> {
+  return {
+    links: cloneStageState(stages.links),
+    pdf: cloneStageState(stages.pdf),
+    extract: cloneStageState(stages.extract),
+  };
+}
+
+function isPlaceholderStageSnapshot(item: any) {
+  const progress = item?.progress || {};
+  return (
+    (item?.status || "pending") === "pending" &&
+    Number(progress.current || 0) === 0 &&
+    Number(progress.total || 0) === 0 &&
+    Number(progress.percent || 0) === 0 &&
+    !item?.result &&
+    !item?.hint
+  );
+}
+
 export const useTaskStore = defineStore("task", {
   state: () => ({
     run: emptyRun(),
@@ -113,11 +152,12 @@ export const useTaskStore = defineStore("task", {
         return 1;
       }
       if (state.run.mode !== "pipeline") {
-        return Number(state.stages[state.run.mode].progress.percent || 0);
+        return stagePercent(state.stages[state.run.mode]);
       }
-      const currentStage = state.run.currentStage;
-      if (!currentStage) return 0;
-      return Number(state.stages[currentStage].progress.percent || 0);
+      const totalStages = PIPELINE_STAGE_ORDER.length;
+      if (totalStages === 0) return 0;
+      const aggregate = PIPELINE_STAGE_ORDER.reduce((sum, stageName) => sum + stagePercent(state.stages[stageName]), 0);
+      return Math.min(1, Math.max(0, aggregate / totalStages));
     },
     liveCrawl: (state) => {
       const result = state.stages.links.result;
@@ -311,8 +351,8 @@ export const useTaskStore = defineStore("task", {
     },
     prepareStagesForMode(mode: RunMode) {
       const resetMap: Record<RunMode, StageName[]> = {
-        links: ["links", "pdf", "extract"],
-        pdf: ["pdf", "extract"],
+        links: ["links"],
+        pdf: ["pdf"],
         extract: ["extract"],
         pipeline: ["links", "pdf", "extract"],
       };
@@ -402,11 +442,12 @@ export const useTaskStore = defineStore("task", {
       this.incrementalPollTimer = null;
     },
     applyRunSnapshot(payload: any) {
+      const status = payload.status;
       this.run = {
         runId: payload.runId,
         mode: payload.mode,
-        status: payload.status,
-        currentStage: payload.currentStage,
+        status,
+        currentStage: isTerminalRunStatus(status) ? null : payload.currentStage,
         startedAt: payload.startedAt,
         finishedAt: payload.finishedAt,
         summary: payload.summary,
@@ -417,6 +458,14 @@ export const useTaskStore = defineStore("task", {
     applyStageSnapshot(items: any[]) {
       items.forEach((item) => {
         const stageName = item.name as StageName;
+        if (
+          this.run.mode &&
+          this.run.mode !== "pipeline" &&
+          stageName !== this.run.mode &&
+          isPlaceholderStageSnapshot(item)
+        ) {
+          return;
+        }
         const current = this.stages[stageName];
         this.stages[stageName] = {
           ...current,
@@ -457,18 +506,36 @@ export const useTaskStore = defineStore("task", {
 
       if (type === "run.paused") {
         this.run.status = "paused";
+        if (this.run.currentStage) {
+          this.stages[this.run.currentStage].hint = "暂停中";
+        }
         return;
       }
 
       if (type === "run.resumed") {
         this.run.status = "running";
+        if (this.run.currentStage) {
+          this.stages[this.run.currentStage].hint = "执行中";
+        }
         return;
       }
 
       if (type === "run.completed") {
+        const currentStage = this.run.currentStage;
         this.run.status = "completed";
+        this.run.currentStage = null;
         this.run.finishedAt = data.finishedAt;
         this.run.summary = data.summary;
+        if (currentStage) {
+          const total = Number(this.stages[currentStage].progress.total || 0);
+          this.stages[currentStage].status = "completed";
+          this.stages[currentStage].progress = {
+            current: total > 0 ? total : 1,
+            total: total > 0 ? total : 1,
+            percent: 1,
+          };
+          this.stages[currentStage].hint = "已完成";
+        }
         this.stopPolling();
         this.loadVisualizationIndex().catch(() => {});
         this.notifyRunFinished("completed", `${modeText(this.run.mode)} 已完成`);
@@ -476,9 +543,15 @@ export const useTaskStore = defineStore("task", {
       }
 
       if (type === "run.failed") {
+        const currentStage = this.run.currentStage;
         this.run.status = "failed";
+        this.run.currentStage = null;
         this.run.finishedAt = data.finishedAt;
         this.run.error = data.error;
+        if (currentStage) {
+          this.stages[currentStage].status = "failed";
+          this.stages[currentStage].hint = data.error || "执行失败";
+        }
         this.stopPolling();
         this.loadVisualizationIndex().catch(() => {});
         this.notifyRunFinished("failed", `${modeText(this.run.mode)} 失败：${data.error || "请查看日志"}`);
@@ -486,8 +559,16 @@ export const useTaskStore = defineStore("task", {
       }
 
       if (type === "run.cancelled") {
+        const currentStage = this.run.currentStage;
         this.run.status = "cancelled";
+        this.run.currentStage = null;
         this.run.finishedAt = data.finishedAt;
+        if (currentStage) {
+          this.stages[currentStage].status = "cancelled";
+          if (!this.stages[currentStage].hint) {
+            this.stages[currentStage].hint = "已终止";
+          }
+        }
         this.stopPolling();
         this.loadVisualizationIndex().catch(() => {});
         this.notifyRunFinished("cancelled", `${modeText(this.run.mode)} 已终止`);
@@ -551,6 +632,13 @@ export const useTaskStore = defineStore("task", {
       }
     },
     async startRun(mode: RunMode) {
+      const previousRun = {
+        ...this.run,
+        summary: { ...this.run.summary },
+        outputs: { ...this.run.outputs },
+      };
+      const previousStages = cloneStageMap(this.stages);
+      const previousLogs = this.logs.map((item) => ({ ...item }));
       const startedAt = new Date().toISOString();
       this.resetRunOnly();
       this.prepareStagesForMode(mode);
@@ -577,7 +665,11 @@ export const useTaskStore = defineStore("task", {
         this.syncActiveRun().catch(() => {});
         this.startPolling();
       } catch (error) {
-        this.reset();
+        this.stopPolling();
+        this.stopIncrementalPolling();
+        this.run = previousRun;
+        this.stages = previousStages;
+        this.logs = previousLogs;
         throw error;
       }
     },

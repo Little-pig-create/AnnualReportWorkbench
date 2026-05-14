@@ -131,13 +131,16 @@ class VisualizationIndexService:
             "_years": result,
         }
 
-    def _count_top_level_pdf_by_year(self, annual_report_dir: Path, years: list[int]) -> dict[str, dict[str, Any]]:
+    def _count_pdf_by_year(self, annual_report_dir: Path, years: list[int]) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
         for year in years:
             year_dir = annual_report_dir / str(year)
             total = 0
+            replaced_total = 0
             if year_dir.exists():
-                total = sum(1 for item in year_dir.glob("*.pdf") if item.is_file())
+                total += sum(1 for item in year_dir.glob("*.pdf") if item.is_file())
+                total += sum(1 for item in (year_dir / "pdf").glob("*.pdf") if item.is_file())
+                replaced_total = sum(1 for item in (year_dir / "replaced_pdfs").glob("*.pdf") if item.is_file())
             result[str(year)] = {
                 "year": year,
                 "total": total,
@@ -147,6 +150,13 @@ class VisualizationIndexService:
                 "skipped": 0,
                 "completed": total,
                 "percent": 1.0 if total > 0 else 0.0,
+                "replacedTotal": replaced_total,
+                "replacedDownloaded": 0,
+                "replacedExists": replaced_total,
+                "replacedFailed": 0,
+                "replacedSkipped": 0,
+                "replacedCompleted": replaced_total,
+                "replacedPercent": 1.0 if replaced_total > 0 else 0.0,
                 "status": "completed" if total > 0 else "pending",
                 "active": False,
                 "updatedAt": _now_text(),
@@ -159,7 +169,7 @@ class VisualizationIndexService:
             year_dir = text_output_dir / str(year)
             total = 0
             if year_dir.exists():
-                total = sum(1 for item in year_dir.glob("*.txt") if item.is_file())
+                total = sum(1 for item in year_dir.rglob("*.txt") if item.is_file())
             result[str(year)] = {
                 "year": year,
                 "total": total,
@@ -203,7 +213,7 @@ class VisualizationIndexService:
                 links_years = links_payload["_years"]
                 self._write_json(self._links_path(state_dir), links_years)
             if not pdf_years:
-                pdf_years = self._count_top_level_pdf_by_year(annual_report_dir, years)
+                pdf_years = self._count_pdf_by_year(annual_report_dir, years)
                 self._write_json(self._pdf_path(state_dir), pdf_years)
             if not txt_years:
                 txt_years = self._count_top_level_txt_by_year(text_output_dir, years)
@@ -235,6 +245,8 @@ class VisualizationIndexService:
                 "yearBuckets": pdf_items,
                 "total": sum(int(item.get("total", 0) or 0) for item in pdf_items),
                 "completed": sum(int(item.get("completed", 0) or 0) for item in pdf_items),
+                "oldAnnualReportTotal": sum(int(item.get("replacedTotal", 0) or 0) for item in pdf_items),
+                "oldAnnualReportCompleted": sum(int(item.get("replacedCompleted", 0) or 0) for item in pdf_items),
             },
             "extract": {
                 "yearBuckets": txt_items,

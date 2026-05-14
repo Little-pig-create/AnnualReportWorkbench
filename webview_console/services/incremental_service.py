@@ -213,6 +213,7 @@ class IncrementalStatusService:
                     summary_by_year[year] = item
 
         items_by_year: dict[int, list[Any]] = {year: [] for year in years}
+        replaced_items_by_year: dict[int, list[Any]] = {year: [] for year in years}
         locator_cache: dict[Any, Any] = {}
         if not lightweight:
             try:
@@ -222,9 +223,13 @@ class IncrementalStatusService:
             replaced_items = load_replaced_reports_from_output_dir(annual_report_dir)
 
             all_items: list[Any] = []
-            for item in [*target_items, *replaced_items]:
+            for item in target_items:
                 if item.report_year in items_by_year:
                     items_by_year[item.report_year].append(item)
+                    all_items.append(item)
+            for item in replaced_items:
+                if item.report_year in replaced_items_by_year:
+                    replaced_items_by_year[item.report_year].append(item)
                     all_items.append(item)
             locator_cache = build_pdf_locator_cache_for_items(annual_report_dir, all_items) if all_items else {}
 
@@ -232,39 +237,50 @@ class IncrementalStatusService:
         target_total = 0
         existing_total = 0
         skipped_total = 0
+        old_annual_report_total = 0
+        old_annual_report_existing_total = 0
         summary_years = 0
 
         for year in years:
             manifest_ready = (annual_report_dir / str(year) / FILTERED_FILENAME).exists()
             items = items_by_year[year]
+            replaced_items = replaced_items_by_year[year]
             summary_item = summary_by_year.get(year) or {}
             if summary_item:
                 summary_years += 1
 
             manifest_total = len(items)
-            summary_total = _safe_int(summary_item.get("filtered_total")) + _safe_int(summary_item.get("replaced_total"))
+            summary_total = _safe_int(summary_item.get("filtered_total"))
             total = manifest_total if manifest_total > 0 else summary_total
+            old_annual_report_year_total = len(replaced_items) if replaced_items else _safe_int(summary_item.get("replaced_total"))
 
             existing = 0
+            old_annual_report_existing = 0
             if not lightweight:
                 for item in items:
                     if find_existing_pdf_path(annual_report_dir, item, locator_cache) is not None:
                         existing += 1
+                for item in replaced_items:
+                    if find_existing_pdf_path(annual_report_dir, item, locator_cache) is not None:
+                        old_annual_report_existing += 1
 
             if existing == 0:
                 existing = _safe_int(summary_item.get("downloaded")) + _safe_int(summary_item.get("exists"))
-                existing += _safe_int(summary_item.get("replaced_downloaded")) + _safe_int(summary_item.get("replaced_exists"))
+            if old_annual_report_existing == 0:
+                old_annual_report_existing = _safe_int(summary_item.get("replaced_downloaded")) + _safe_int(summary_item.get("replaced_exists"))
 
             skipped = _count_permanent_failures(download_failures_path(annual_report_dir, year))
             if skipped == 0 and summary_item:
-                skipped = _safe_int(summary_item.get("skipped")) + _safe_int(summary_item.get("replaced_skipped"))
+                skipped = _safe_int(summary_item.get("skipped"))
 
-            failed = _safe_int(summary_item.get("failed")) + _safe_int(summary_item.get("replaced_failed"))
+            failed = _safe_int(summary_item.get("failed"))
             pending = max(total - existing - skipped, 0)
 
             target_total += total
             existing_total += existing
             skipped_total += skipped
+            old_annual_report_total += old_annual_report_year_total
+            old_annual_report_existing_total += old_annual_report_existing
 
             if total > 0 and pending == 0:
                 status = "completed"
@@ -285,6 +301,8 @@ class IncrementalStatusService:
                     "skipped": skipped,
                     "failed": failed,
                     "pending": pending,
+                    "oldAnnualReportTotal": old_annual_report_year_total,
+                    "oldAnnualReportExisting": old_annual_report_existing,
                     "status": status,
                 }
             )
@@ -294,6 +312,8 @@ class IncrementalStatusService:
             "existingTotal": existing_total,
             "skippedTotal": skipped_total,
             "pendingTotal": max(target_total - existing_total - skipped_total, 0),
+            "oldAnnualReportTotal": old_annual_report_total,
+            "oldAnnualReportExistingTotal": old_annual_report_existing_total,
             "summaryPath": str(summary_path),
             "summaryExists": summary_path.exists(),
             "summaryTrackedYears": summary_years,

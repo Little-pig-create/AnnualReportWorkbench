@@ -44,7 +44,15 @@ const statusLabel = computed(() => ({
   cancelled: "已取消",
 }[props.stage.status]));
 
-const percentText = computed(() => `${Math.round(clampedPercent.value * 100)}%`);
+function formatPercent(value: number) {
+  const percent = Math.min(100, Math.max(0, value * 100));
+  if (percent === 0 || percent === 100) return `${Math.round(percent)}%`;
+  if (percent >= 99) return `${percent.toFixed(2)}%`;
+  if (percent >= 10) return `${percent.toFixed(1)}%`;
+  return `${percent.toFixed(2)}%`;
+}
+
+const percentText = computed(() => formatPercent(clampedPercent.value));
 
 const displayHint = computed(() => {
   if (props.stage.status === "completed") return "该阶段已完成";
@@ -96,11 +104,15 @@ const detailLines = computed(() => {
     const completed = Number(result.downloaded || 0) + Number(result.exists || 0);
     const skipped = Number(result.skipped || 0);
     const failed = Number(result.failed || 0);
+    const oldAnnualReportTotal = Number(result.oldAnnualReportTotal || 0);
     const lines: string[] = [];
 
     if (total > 0) {
       lines.push(`PDF 总量：${total} 份`);
       lines.push(`已完成：${completed} · 跳过：${skipped} · 失败：${failed}`);
+    }
+    if (oldAnnualReportTotal > 0) {
+      lines.push(`Old annual reports: ${oldAnnualReportTotal}`);
     }
     return lines;
   }

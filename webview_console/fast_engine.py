@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor
 from dataclasses import dataclass
@@ -62,10 +63,14 @@ PDF_PROGRESS_EMIT_INTERVAL = 0.25
 PDF_PROGRESS_EMIT_EVERY = 8
 PDF_LOG_EMIT_INTERVAL = 1.5
 PDF_LOG_EMIT_EVERY = 20
+PDF_DOWNLOAD_CONNECT_TIMEOUT = 15
+PDF_DOWNLOAD_TOTAL_TIMEOUT = 75
+PDF_DOWNLOAD_SOCK_READ_TIMEOUT = 45
 EXTRACT_PROGRESS_EMIT_INTERVAL = 0.35
 EXTRACT_PROGRESS_EMIT_EVERY = 6
 EXTRACT_LOG_EMIT_INTERVAL = 1.5
 EXTRACT_LOG_EMIT_EVERY = 20
+EXTRACT_INLINE_THRESHOLD = 2
 MIN_PDF_BYTES = 1024
 
 LogCallback = Callable[[str, str], None]
@@ -267,6 +272,13 @@ def _safe_eta_seconds(total: int, completed: int, elapsed_seconds: float) -> int
     return int(round(remaining / per_second))
 
 
+def _resolve_extract_worker_count(configured: int, work_items: int) -> int:
+    if work_items <= 0:
+        return 0
+    cpu_total = os.cpu_count() or 1
+    return max(1, min(max(1, configured), work_items, cpu_total))
+
+
 def build_pdf_year_buckets(
     years: list[int],
     target_by_year: dict[int, list[ReportItem]],
@@ -277,13 +289,22 @@ def build_pdf_year_buckets(
 ) -> list[dict[str, Any]]:
     buckets: list[dict[str, Any]] = []
     for year in years:
-        total = len(target_by_year.get(year, [])) + len(replaced_by_year.get(year, []))
+        total = len(target_by_year.get(year, []))
+        replaced_total = len(replaced_by_year.get(year, []))
         stats = stats_by_year.get(year, {})
-        downloaded = int(stats.get("downloaded", 0)) + int(stats.get("replaced_downloaded", 0))
-        exists = int(stats.get("exists", 0)) + int(stats.get("replaced_exists", 0))
-        failed = int(stats.get("failed", 0)) + int(stats.get("replaced_failed", 0))
-        skipped = int(stats.get("skipped", 0)) + int(stats.get("replaced_skipped", 0))
+        downloaded = int(stats.get("downloaded", 0))
+        exists = int(stats.get("exists", 0))
+        failed = int(stats.get("failed", 0))
+        skipped = int(stats.get("skipped", 0))
         completed = min(total, downloaded + exists + failed + skipped)
+        replaced_downloaded = int(stats.get("replaced_downloaded", 0))
+        replaced_exists = int(stats.get("replaced_exists", 0))
+        replaced_failed = int(stats.get("replaced_failed", 0))
+        replaced_skipped = int(stats.get("replaced_skipped", 0))
+        replaced_completed = min(
+            replaced_total,
+            replaced_downloaded + replaced_exists + replaced_failed + replaced_skipped,
+        )
         if total == 0:
             status = "pending"
         elif completed >= total:
@@ -302,6 +323,13 @@ def build_pdf_year_buckets(
                 "skipped": skipped,
                 "completed": completed,
                 "percent": round(completed / total, 6) if total > 0 else 0,
+                "replacedTotal": replaced_total,
+                "replacedDownloaded": replaced_downloaded,
+                "replacedExists": replaced_exists,
+                "replacedFailed": replaced_failed,
+                "replacedSkipped": replaced_skipped,
+                "replacedCompleted": replaced_completed,
+                "replacedPercent": round(replaced_completed / replaced_total, 6) if replaced_total > 0 else 0,
                 "status": status,
                 "active": current_year == year,
             }
@@ -369,14 +397,29 @@ def collect_pdf_paths_fast(
             continue
         if end_year is not None and year > end_year:
             continue
-        pdf_paths.extend(
-            sorted(
-                path
-                for path in year_dir.glob("*.pdf")
-                if path.is_file()
+        for base_dir in (year_dir, year_dir / "pdf"):
+            if not base_dir.exists():
+                continue
+            pdf_paths.extend(
+                sorted(
+                    path
+                    for path in base_dir.glob("*.pdf")
+                    if path.is_file()
+                )
             )
-        )
     return pdf_paths
+
+
+def build_existing_text_output_index(output_dir: Path, years: list[int]) -> set[str]:
+    existing_outputs: set[str] = set()
+    for year in years:
+        year_dir = output_dir / str(year)
+        if not year_dir.exists():
+            continue
+        for text_path in year_dir.rglob("*.txt"):
+            if text_path.is_file():
+                existing_outputs.add(text_path.relative_to(output_dir).as_posix())
+    return existing_outputs
 
 
 def update_summary_json_fast(
@@ -544,18 +587,26 @@ async def run_pdf_download_service_fast(
                     continue
                 pending_downloads.append((role, item, target_path))
 
-    pdf_total = sum(len(rows) for rows in target_by_year.values()) + sum(len(rows) for rows in replaced_by_year.values())
+    pdf_total = sum(len(rows) for rows in target_by_year.values())
+    replaced_pdf_total = sum(len(rows) for rows in replaced_by_year.values())
+    overall_pdf_total = pdf_total + replaced_pdf_total
     emit_log(log_callback, "INFO", f"快速 PDF 下载启动：总任务 {pdf_total}，待下载 {len(pending_downloads)}")
     emit_progress(
         progress_callback,
         phase="prepare",
         pdf_total=pdf_total,
+        replaced_pdf_total=replaced_pdf_total,
+        overall_pdf_total=overall_pdf_total,
         total=len(pending_downloads),
         completed=0,
         downloaded=0,
-        exists=sum(v["exists"] + v["replaced_exists"] for v in stats_by_year.values()),
+        exists=sum(v["exists"] for v in stats_by_year.values()),
         failed=0,
-        skipped=sum(v["skipped"] + v["replaced_skipped"] for v in stats_by_year.values()),
+        skipped=sum(v["skipped"] for v in stats_by_year.values()),
+        replaced_downloaded=0,
+        replaced_exists=sum(v["replaced_exists"] for v in stats_by_year.values()),
+        replaced_failed=0,
+        replaced_skipped=sum(v["replaced_skipped"] for v in stats_by_year.values()),
         year_buckets=build_pdf_year_buckets(years, target_by_year, replaced_by_year, stats_by_year),
         speed_per_minute=0.0,
         eta_seconds=0,
@@ -597,12 +648,18 @@ async def run_pdf_download_service_fast(
                 progress_callback,
                 phase="download",
                 pdf_total=pdf_total,
+                replaced_pdf_total=replaced_pdf_total,
+                overall_pdf_total=overall_pdf_total,
                 total=len(pending_downloads),
                 completed=finished,
-                downloaded=downloaded_total,
-                exists=sum(v["exists"] + v["replaced_exists"] for v in stats_by_year.values()),
-                failed=failed_total,
-                skipped=sum(v["skipped"] + v["replaced_skipped"] for v in stats_by_year.values()),
+                downloaded=sum(v["downloaded"] for v in stats_by_year.values()),
+                exists=sum(v["exists"] for v in stats_by_year.values()),
+                failed=sum(v["failed"] for v in stats_by_year.values()),
+                skipped=sum(v["skipped"] for v in stats_by_year.values()),
+                replaced_downloaded=sum(v["replaced_downloaded"] for v in stats_by_year.values()),
+                replaced_exists=sum(v["replaced_exists"] for v in stats_by_year.values()),
+                replaced_failed=sum(v["replaced_failed"] for v in stats_by_year.values()),
+                replaced_skipped=sum(v["replaced_skipped"] for v in stats_by_year.values()),
                 current_title=current_title,
                 current_code=current_code,
                 current_year=current_year,
@@ -690,7 +747,12 @@ async def run_pdf_download_service_fast(
             emit_log(log_callback, "WARN", "未安装 aiohttp，快速模式退化为同步下载逻辑")
             await run_all(None)
         else:
-            timeout = aiohttp.ClientTimeout(total=120)
+            timeout = aiohttp.ClientTimeout(
+                total=PDF_DOWNLOAD_TOTAL_TIMEOUT,
+                connect=PDF_DOWNLOAD_CONNECT_TIMEOUT,
+                sock_connect=PDF_DOWNLOAD_CONNECT_TIMEOUT,
+                sock_read=PDF_DOWNLOAD_SOCK_READ_TIMEOUT,
+            )
             connector = aiohttp.TCPConnector(limit=max(32, int(config.download_concurrency) * 4))
             async with aiohttp.ClientSession(timeout=timeout, connector=connector, headers=DEFAULT_HEADERS) as session:
                 await run_all(session)
@@ -708,17 +770,29 @@ async def run_pdf_download_service_fast(
 
     merged_summary = update_summary_json_fast(output_dir, target_by_year, replaced_by_year, stats_by_year)
     elapsed = time.perf_counter() - start_time
-    exists_total = sum(v["exists"] + v["replaced_exists"] for v in stats_by_year.values())
-    skipped_total = sum(v["skipped"] + v["replaced_skipped"] for v in stats_by_year.values())
+    downloaded_total_main = sum(v["downloaded"] for v in stats_by_year.values())
+    exists_total = sum(v["exists"] for v in stats_by_year.values())
+    failed_total_main = sum(v["failed"] for v in stats_by_year.values())
+    skipped_total = sum(v["skipped"] for v in stats_by_year.values())
+    replaced_downloaded_total = sum(v["replaced_downloaded"] for v in stats_by_year.values())
+    replaced_exists_total = sum(v["replaced_exists"] for v in stats_by_year.values())
+    replaced_failed_total = sum(v["replaced_failed"] for v in stats_by_year.values())
+    replaced_skipped_total = sum(v["replaced_skipped"] for v in stats_by_year.values())
     emit_progress(
         progress_callback,
         phase="done",
         elapsed_seconds=elapsed,
         pdf_total=pdf_total,
-        downloaded=downloaded_total,
+        replaced_pdf_total=replaced_pdf_total,
+        overall_pdf_total=overall_pdf_total,
+        downloaded=downloaded_total_main,
         exists=exists_total,
-        failed=failed_total,
+        failed=failed_total_main,
         skipped=skipped_total,
+        replaced_downloaded=replaced_downloaded_total,
+        replaced_exists=replaced_exists_total,
+        replaced_failed=replaced_failed_total,
+        replaced_skipped=replaced_skipped_total,
         speed_per_minute=_safe_speed_per_minute(len(pending_downloads), elapsed),
         eta_seconds=0,
         year_buckets=build_pdf_year_buckets(years, target_by_year, replaced_by_year, stats_by_year),
@@ -731,9 +805,9 @@ async def run_pdf_download_service_fast(
         summary=merged_summary if isinstance(merged_summary, list) else None,
         elapsed_seconds=elapsed,
         pdf_total=pdf_total,
-        downloaded=downloaded_total,
+        downloaded=downloaded_total_main,
         exists=exists_total,
-        failed=failed_total,
+        failed=failed_total_main,
         skipped=skipped_total,
     )
 
@@ -817,7 +891,17 @@ async def run_extraction_fast(
         work_items.append((pdf_path, output_path))
 
     write_text_json(checkpoint_path, checkpoint)
-    emit_log(log_callback, "INFO", f"快速文本提取启动：PDF 总数 {len(pdf_paths)}，已存在 {stats['exists']}，待处理 {len(work_items)}，进程数 {max(1, config.concurrency)}")
+    worker_count = _resolve_extract_worker_count(config.concurrency, len(work_items))
+    use_inline_backend = 0 < len(work_items) <= EXTRACT_INLINE_THRESHOLD
+    if not work_items:
+        backend_label = "reuse"
+    else:
+        backend_label = "thread" if use_inline_backend else "process"
+    emit_log(
+        log_callback,
+        "INFO",
+        f"快速文本提取启动：PDF 总数 {len(pdf_paths)}，已存在 {stats['exists']}，待处理 {len(work_items)}，调度方式 {backend_label}，选用 workers={worker_count}",
+    )
     emit_progress(
         progress_callback,
         phase="prepare",
@@ -832,9 +916,7 @@ async def run_extraction_fast(
         eta_seconds=0,
     )
 
-    worker_count = max(1, config.concurrency)
     loop = asyncio.get_running_loop()
-    executor = ProcessPoolExecutor(max_workers=worker_count)
     pending: dict[asyncio.Future, tuple[Path, Path]] = {}
     pending_iter = iter(work_items)
     finished = 0
@@ -859,8 +941,43 @@ async def run_extraction_fast(
                 pdf_path, output_path = next(pending_iter)
             except StopIteration:
                 break
-            future = loop.run_in_executor(executor, _run_extract_worker, pdf_path, output_path)
+            if use_inline_backend:
+                future = asyncio.create_task(asyncio.to_thread(_run_extract_worker, pdf_path, output_path))
+            else:
+                future = loop.run_in_executor(executor, _run_extract_worker, pdf_path, output_path)
             pending[future] = (pdf_path, output_path)
+
+    if not work_items:
+        summary = build_text_summary(input_dir, output_dir, pdf_paths, stats, config.start_year, config.end_year, failed_samples)
+        summary_path = output_dir / TEXT_SUMMARY_NAME
+        write_text_json(summary_path, summary)
+        emit_log(log_callback, "INFO", "无需执行文本提取，已直接复用现有输出")
+        emit_progress(
+            progress_callback,
+            phase="done",
+            total=0,
+            completed=0,
+            existing=stats["exists"],
+            failed=stats["failed"],
+            extracted=stats["extracted"],
+            summary_path=str(summary_path),
+            checkpoint_path=str(checkpoint_path),
+            pdf_total=len(pdf_paths),
+            current_year=None,
+            speed_per_minute=0.0,
+            eta_seconds=0,
+            year_buckets=build_extract_year_buckets(years, totals_by_year, stats_by_year),
+        )
+        return ExtractTextResult(
+            summary=summary,
+            summary_path=summary_path,
+            checkpoint_path=checkpoint_path,
+            stats=dict(stats),
+            pdf_total=len(pdf_paths),
+            pending_total=0,
+        )
+
+    executor = None if use_inline_backend else ProcessPoolExecutor(max_workers=worker_count)
 
     try:
         submit_more()
@@ -943,7 +1060,8 @@ async def run_extraction_fast(
             submit_more()
     finally:
         flush_checkpoint(force=True)
-        executor.shutdown(wait=False, cancel_futures=True)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     summary = build_text_summary(input_dir, output_dir, pdf_paths, stats, config.start_year, config.end_year, failed_samples)
     summary_path = output_dir / TEXT_SUMMARY_NAME

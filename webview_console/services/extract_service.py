@@ -105,6 +105,7 @@ class ExtractService:
         existing_by_year = {year: 0 for year in years}
         extracted_by_year = {year: 0 for year in years}
         failed_by_year = {year: 0 for year in years}
+        last_year_buckets: list[dict[str, Any]] | None = None
         last_extracted = 0
         last_failed = 0
         last_exists = 0
@@ -150,7 +151,7 @@ class ExtractService:
             reporter.log(level.upper(), self.stage, message)
 
         def on_progress(payload: dict[str, Any]) -> None:
-            nonlocal last_extracted, last_failed, last_exists
+            nonlocal last_extracted, last_failed, last_exists, last_year_buckets
 
             phase = str(payload.get("phase") or "")
             pdf_total = int(payload.get("pdf_total", 0) or 0)
@@ -162,6 +163,8 @@ class ExtractService:
             eta_seconds = int(payload.get("eta_seconds", 0) or 0)
             current_year_payload = int(payload.get("current_year", 0) or 0)
             year_buckets = payload.get("year_buckets")
+            if isinstance(year_buckets, list):
+                last_year_buckets = [dict(item) for item in year_buckets if isinstance(item, dict)]
 
             if phase == "prepare":
                 total = pdf_total or pending_total
@@ -231,7 +234,7 @@ class ExtractService:
                     "extracted": extracted,
                     "exists": exists,
                     "failed": failed,
-                    "yearBuckets": year_buckets if isinstance(year_buckets, list) else build_year_buckets(),
+                    "yearBuckets": last_year_buckets if last_year_buckets is not None else build_year_buckets(),
                     "speedPerMinute": speed_per_minute,
                     "etaSeconds": eta_seconds,
                     "currentYear": current_year_payload or None,
@@ -259,7 +262,7 @@ class ExtractService:
             "summaryPath": str(result.summary_path),
             "checkpointPath": str(result.checkpoint_path),
             "summary": result.summary,
-            "yearBuckets": build_year_buckets(),
+            "yearBuckets": last_year_buckets if last_year_buckets is not None else build_year_buckets(),
             "speedPerMinute": 0,
             "etaSeconds": 0,
         }

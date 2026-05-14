@@ -122,7 +122,6 @@ class Runtime:
                 settings_snapshot=self.settings.to_dict(),
                 outputs=self._resolve_output_paths(self.settings),
             )
-            self._seed_run_stages_from_visualization(run_state)
             self._prepare_stages_for_mode(run_state, mode)
             worker = ExecutionWorker(self, run_state, self.settings, mode)
             self._runs[run_id] = run_state
@@ -147,7 +146,7 @@ class Runtime:
             self._runs[run_id].status = "paused"
             current_stage = self._runs[run_id].current_stage
             if current_stage and current_stage in self._runs[run_id].stages:
-                self._runs[run_id].stages[current_stage].hint = "暂停中"
+                self._runs[run_id].stages[current_stage].hint = "已暂停"
             self._worker.pause()
         self.emit(events.run_paused(run_id))
         self._persist_run_history_async(run_id)
@@ -319,6 +318,7 @@ class Runtime:
                 if stage_state.status == "running":
                     stage_state.status = "cancelled"
                 stage_state.hint = "窗口关闭，任务中断"
+            run_state.current_stage = None
             self._active_run_id = None
             self._worker = None
 
@@ -396,7 +396,7 @@ class Runtime:
             "outputDirectories": outputs,
             "settingsSnapshot": run_state.settings_snapshot,
             "summary": run_state.summary,
-            "stages": [run_state.stages[name].to_dict() for name in run_state.stages],
+            "stages": [run_state.stages[name].to_dict() for name in STAGE_ORDER],
         }
 
     def _reset_stage_state(self, run_state: RunState, stage_name: str) -> None:
@@ -409,160 +409,10 @@ class Runtime:
 
     def _prepare_stages_for_mode(self, run_state: RunState, mode: str) -> None:
         reset_map = {
-            "links": ("links", "pdf", "extract"),
-            "pdf": ("pdf", "extract"),
+            "links": ("links",),
+            "pdf": ("pdf",),
             "extract": ("extract",),
             "pipeline": STAGE_ORDER,
         }
         for stage_name in reset_map[mode]:
             self._reset_stage_state(run_state, stage_name)
-
-    def _seed_run_stages_from_visualization(self, run_state: RunState) -> None:
-        history_stages = self._load_latest_stage_map(run_state)
-        if history_stages:
-            self._seed_run_stages_from_history(run_state, history_stages)
-
-        try:
-            snapshot = self.visualization_index_service.build_snapshot(self.settings)
-        except Exception:
-            return
-
-        links = snapshot.get("links") or {}
-        links_buckets = links.get("yearBuckets") if isinstance(links.get("yearBuckets"), list) else []
-        links_year_total = int(links.get("yearTotal", len(links_buckets)) or len(links_buckets) or 0)
-        links_completed = sum(
-            1 for item in links_buckets
-            if str((item or {}).get("status", "")).lower() == "completed"
-        )
-        if links_year_total > 0 and run_state.stages["links"].status == "pending":
-            links_stage = run_state.stages["links"]
-            links_percent = min(links_completed / links_year_total, 1.0)
-            links_stage.progress = Progress(
-                current=min(links_completed, links_year_total),
-                total=links_year_total,
-                percent=links_percent,
-            )
-            links_stage.result = {
-                "rows": int(links.get("totalAnnouncements", 0) or 0),
-                "yearBuckets": links_buckets,
-                "live": links,
-            }
-            if links_completed >= links_year_total:
-                links_stage.status = "completed"
-                links_stage.hint = "已完成"
-                run_state.summary["links"] = links_stage.result
-            elif links_completed > 0:
-                links_stage.hint = "检测到历史结果"
-
-        pdf = snapshot.get("pdf") or {}
-        pdf_buckets = pdf.get("yearBuckets") if isinstance(pdf.get("yearBuckets"), list) else []
-        pdf_total = int(pdf.get("total", 0) or 0)
-        pdf_completed = int(pdf.get("completed", 0) or 0)
-        if pdf_total > 0 and run_state.stages["pdf"].status == "pending":
-            pdf_stage = run_state.stages["pdf"]
-            pdf_percent = min(pdf_completed / pdf_total, 1.0)
-            pdf_stage.progress = Progress(
-                current=min(pdf_completed, pdf_total),
-                total=pdf_total,
-                percent=pdf_percent,
-            )
-            pdf_stage.result = {
-                "pdfTotal": pdf_total,
-                "downloaded": 0,
-                "exists": pdf_completed,
-                "failed": 0,
-                "skipped": 0,
-                "yearBuckets": pdf_buckets,
-                "speedPerMinute": 0,
-                "etaSeconds": 0,
-            }
-            if pdf_completed >= pdf_total:
-                pdf_stage.status = "completed"
-                pdf_stage.hint = "已完成"
-                run_state.summary["pdf"] = pdf_stage.result
-            elif pdf_completed > 0:
-                pdf_stage.hint = "检测到历史结果"
-
-        extract = snapshot.get("extract") or {}
-        extract_buckets = extract.get("yearBuckets") if isinstance(extract.get("yearBuckets"), list) else []
-        extract_total = int(extract.get("total", 0) or 0)
-        extract_completed = int(extract.get("completed", 0) or 0)
-        if extract_total > 0 and run_state.stages["extract"].status == "pending":
-            extract_stage = run_state.stages["extract"]
-            extract_percent = min(extract_completed / extract_total, 1.0)
-            extract_stage.progress = Progress(
-                current=min(extract_completed, extract_total),
-                total=extract_total,
-                percent=extract_percent,
-            )
-            extract_stage.result = {
-                "pdfTotal": extract_total,
-                "extracted": extract_completed,
-                "exists": 0,
-                "failed": 0,
-                "yearBuckets": extract_buckets,
-                "speedPerMinute": 0,
-                "etaSeconds": 0,
-            }
-            if extract_completed >= extract_total:
-                extract_stage.status = "completed"
-                extract_stage.hint = "已完成"
-                run_state.summary["extract"] = extract_stage.result
-            elif extract_completed > 0:
-                extract_stage.hint = "检测到历史结果"
-
-    def _load_latest_stage_map(self, run_state: RunState) -> dict[str, dict[str, Any]]:
-        items = self.history_store.list()
-        current_outputs = dict(run_state.outputs or {})
-        current_project_root = str(current_outputs.get("projectRoot") or "")
-        current_annual_dir = str(current_outputs.get("annualReportDir") or "")
-        current_text_dir = str(current_outputs.get("textOutputDir") or "")
-        for item in items:
-            output_dirs = item.get("outputDirectories") or {}
-            if not isinstance(output_dirs, dict):
-                continue
-            project_root = str(output_dirs.get("projectRoot") or "")
-            annual_dir = str(output_dirs.get("annualReportDir") or "")
-            text_dir = str(output_dirs.get("textOutputDir") or "")
-            if (
-                project_root != current_project_root
-                or annual_dir != current_annual_dir
-                or text_dir != current_text_dir
-            ):
-                continue
-            stages = item.get("stages")
-            if not isinstance(stages, list):
-                continue
-            mapped: dict[str, dict[str, Any]] = {}
-            for stage in stages:
-                if not isinstance(stage, dict):
-                    continue
-                name = str(stage.get("name") or "").strip()
-                if name in STAGE_ORDER:
-                    mapped[name] = stage
-            if mapped:
-                return mapped
-        return {}
-
-    def _seed_run_stages_from_history(self, run_state: RunState, history_stages: dict[str, dict[str, Any]]) -> None:
-        for stage_name in STAGE_ORDER:
-            payload = history_stages.get(stage_name)
-            if not payload:
-                continue
-
-            status = str(payload.get("status") or "pending")
-            progress_payload = payload.get("progress") or {}
-            progress = Progress(
-                current=int(progress_payload.get("current", 0) or 0),
-                total=int(progress_payload.get("total", 0) or 0),
-                percent=float(progress_payload.get("percent", 0) or 0),
-            )
-            result = payload.get("result") if isinstance(payload.get("result"), dict) else None
-            hint = str(payload.get("hint") or "")
-
-            stage_state = run_state.stages[stage_name]
-            stage_state.status = status
-            stage_state.progress = progress
-            stage_state.result = result
-            stage_state.hint = hint
-            run_state.summary[stage_name] = result

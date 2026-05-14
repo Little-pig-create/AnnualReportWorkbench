@@ -158,7 +158,9 @@
             <span>异常与跳过合计</span>
           </article>
         </div>
-        <BaseChart :option="pdfOption" />
+        <div class="chart-card__viewport">
+          <BaseChart :option="pdfOption" />
+        </div>
       </article>
 
       <article class="surface chart-card chart-card--extract">
@@ -200,7 +202,9 @@
             <span>提取异常总数</span>
           </article>
         </div>
-        <BaseChart :option="extractOption" />
+        <div class="chart-card__viewport">
+          <BaseChart :option="extractOption" />
+        </div>
       </article>
     </div>
   </section>
@@ -224,7 +228,15 @@ const pdfView = ref<"stacked" | "trend">("stacked");
 const extractView = ref<"stacked" | "trend">("stacked");
 let animationFrameId = 0;
 
-const progressPercentText = computed(() => `${Math.round(displayedProgress.value * 100)}%`);
+function formatFixed(value: number, digits = 2) {
+  return Number(value || 0).toFixed(digits);
+}
+
+function formatPercent(value: number) {
+  return `${formatFixed(value * 100)}%`;
+}
+
+const progressPercentText = computed(() => formatPercent(displayedProgress.value));
 const progressGaugeOption = computed(() => ({
   backgroundColor: "transparent",
   tooltip: {
@@ -303,11 +315,11 @@ const progressGaugeOption = computed(() => ({
         fontSize: 26,
         fontWeight: 700,
         color: "#374151",
-        formatter: "{value}",
+        formatter: (value: number) => `${formatFixed(value)}%`,
       },
       data: [
         {
-          value: Math.round(displayedProgress.value * 100),
+          value: Number(formatFixed(displayedProgress.value * 100)),
           name: "进度",
         },
       ],
@@ -527,7 +539,7 @@ const liveCrawlLabel = computed(() => {
     return "链接阶段空闲";
   }
   if (!taskStore.liveCrawl) return "等待实时数据";
-  return `${Math.round(Number(taskStore.liveCrawl.overallPercent || 0) * 100)}%`;
+  return formatPercent(Number(taskStore.liveCrawl.overallPercent || 0));
 });
 
 const yearStepLabel = computed(() => {
@@ -550,16 +562,16 @@ const currentYearCount = computed(() => {
 const pdfSpeedLabel = computed(() => {
   const speed = Number(taskStore.livePdf?.speedPerMinute || 0);
   const eta = Number(taskStore.livePdf?.etaSeconds || 0);
-  const speedText = speed > 0 ? `${Math.round(speed)} 份/分钟` : "速度统计中";
-  const etaText = eta > 0 ? `，预计剩余 ${Math.round(eta)} 秒` : "";
+  const speedText = speed > 0 ? `${formatFixed(speed)} 份/分钟` : "速度统计中";
+  const etaText = eta > 0 ? `，预计剩余 ${formatFixed(eta)} 秒` : "";
   return `${speedText}${etaText}`;
 });
 
 const extractSpeedLabel = computed(() => {
   const speed = Number(taskStore.liveExtract?.speedPerMinute || 0);
   const eta = Number(taskStore.liveExtract?.etaSeconds || 0);
-  const speedText = speed > 0 ? `${Math.round(speed)} 份/分钟` : "速度统计中";
-  const etaText = eta > 0 ? `，预计剩余 ${Math.round(eta)} 秒` : "";
+  const speedText = speed > 0 ? `${formatFixed(speed)} 份/分钟` : "速度统计中";
+  const etaText = eta > 0 ? `，预计剩余 ${formatFixed(eta)} 秒` : "";
   return `${speedText}${etaText}`;
 });
 
@@ -570,12 +582,12 @@ const pdfSummary = computed(() => {
   const completed = buckets.reduce((sum: number, item: any) => sum + Number(item.completed || 0), 0);
   const failed = buckets.reduce((sum: number, item: any) => sum + Number(item.failed || 0), 0);
   const skipped = buckets.reduce((sum: number, item: any) => sum + Number(item.skipped || 0), 0);
-  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const percent = total > 0 ? (completed / total) * 100 : 0;
   return {
     total,
     completed,
     failedSkipped: `${failed + skipped}`,
-    percentText: total > 0 ? `${percent}% 已完成` : "等待数据",
+    percentText: total > 0 ? `${formatFixed(percent)}% 已完成` : "等待数据",
     activeYearText: active ? String(active.year) : "-",
     activeYearSubtext: active ? `该年已完成 ${active.completed || 0} / ${active.total || 0}` : "暂无高亮年份",
   };
@@ -587,12 +599,12 @@ const extractSummary = computed(() => {
   const total = buckets.reduce((sum: number, item: any) => sum + Number(item.total || 0), 0);
   const completed = buckets.reduce((sum: number, item: any) => sum + Number(item.completed || 0), 0);
   const failed = buckets.reduce((sum: number, item: any) => sum + Number(item.failed || 0), 0);
-  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const percent = total > 0 ? (completed / total) * 100 : 0;
   return {
     total,
     completed,
     failed,
-    percentText: total > 0 ? `${percent}% 已完成` : "等待数据",
+    percentText: total > 0 ? `${formatFixed(percent)}% 已完成` : "等待数据",
     activeYearText: active ? String(active.year) : "-",
     activeYearSubtext: active ? `该年已完成 ${active.completed || 0} / ${active.total || 0}` : "暂无高亮年份",
   };
@@ -976,9 +988,11 @@ onBeforeUnmount(() => {
 .live-chart-card,.chart-card { position: relative; overflow: hidden; }
 .live-chart-card::before,.chart-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.75), transparent 38%); pointer-events: none; }
 .live-chart-card { border-radius: 24px; background: linear-gradient(180deg, rgba(247, 250, 252, 0.92), rgba(241, 245, 249, 0.85)); padding: 10px 14px 4px; border: 1px solid rgba(226, 232, 240, 0.75); }
-.chart-card { border: 1px solid rgba(226, 232, 240, 0.75); background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06); }
+.chart-card { display: grid; grid-template-rows: auto auto minmax(0, 1fr); border: 1px solid rgba(226, 232, 240, 0.75); background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06); }
 .chart-card--pdf { background-image: radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); }
 .chart-card--extract { background-image: radial-gradient(circle at top right, rgba(21,132,122,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); }
+.chart-card__viewport { min-height: 420px; }
+.chart-card__viewport :deep(.chart) { min-height: 420px; height: 420px; }
 .live-chart-card,.chart-card,.status-wall,.live-strip,.overview-stack { min-width: 0; }
 .live-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; grid-auto-rows: 168px; }
 .metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
@@ -991,5 +1005,7 @@ onBeforeUnmount(() => {
   .gauge-card { max-width: 100%; }
   .gauge-card :deep(.chart) { min-height: 280px; }
   .chart-header-right,.chart-header-meta { justify-items: start; }
+  .chart-card__viewport { min-height: 360px; }
+  .chart-card__viewport :deep(.chart) { min-height: 360px; height: 360px; }
 }
 </style>

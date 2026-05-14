@@ -103,6 +103,9 @@ AUTO_SPLIT_THRESHOLD = 12
 
 MIN_VALID_PDF_SIZE = 1024
 PDF_CHUNK_SIZE = 256 * 1024
+PDF_DOWNLOAD_CONNECT_TIMEOUT = 15
+PDF_DOWNLOAD_READ_TIMEOUT = 45
+PDF_DOWNLOAD_RETRY_BACKOFF_CAP = 8
 PERMANENT_DOWNLOAD_HTTP_STATUSES = {404, 410}
 AUDIT_SAMPLE_LIMIT = 50
 PDF_AUDIT_REPORT_NAME = "pdf_audit_report.json"
@@ -1116,6 +1119,10 @@ def is_permanent_download_message(message: str) -> bool:
     return str(message).startswith("permanent HTTP ")
 
 
+def pdf_download_retry_delay(attempt: int) -> float:
+    return min(2 ** max(1, attempt), PDF_DOWNLOAD_RETRY_BACKOFF_CAP)
+
+
 def _has_pdf_signature(path: Path) -> bool:
     try:
         if not path.exists() or not path.is_file():
@@ -1792,7 +1799,12 @@ def download_pdf_sync(url: str, path: Path, retries: int = 6) -> tuple[bool, str
             if resume_from > 0:
                 headers["Range"] = f"bytes={resume_from}-"
 
-            with requests.get(url, headers=headers, timeout=90, stream=True) as resp:
+            with requests.get(
+                url,
+                headers=headers,
+                timeout=(PDF_DOWNLOAD_CONNECT_TIMEOUT, PDF_DOWNLOAD_READ_TIMEOUT),
+                stream=True,
+            ) as resp:
                 if resp.status_code == 416 and resume_from >= MIN_VALID_PDF_SIZE:
                     ok, reason = _validate_pdf_artifact(part_path)
                     if ok:
@@ -1829,7 +1841,7 @@ def download_pdf_sync(url: str, path: Path, retries: int = 6) -> tuple[bool, str
         except Exception as e:
             if attempt == retries:
                 return False, str(e)
-            sleep_with_cancel(min(2 ** attempt, 20))
+            sleep_with_cancel(pdf_download_retry_delay(attempt))
     return False, "unreachable"
 
 
@@ -1894,7 +1906,7 @@ async def download_pdf_async(
         except Exception as e:
             if attempt == retries:
                 return False, str(e)
-            await async_sleep_with_cancel(min(2 ** attempt, 20))
+            await async_sleep_with_cancel(pdf_download_retry_delay(attempt))
 
     return False, "unreachable"
 

@@ -98,6 +98,7 @@ class PdfService:
         runtime_downloaded_by_year = {year: 0 for year in years}
         year_totals = {year: 0 for year in years}
         year_skipped = {year: 0 for year in years}
+        last_year_buckets: list[dict[str, Any]] | None = None
 
         reporter.progress(
             self.stage,
@@ -110,6 +111,8 @@ class PdfService:
                 "exists": 0,
                 "failed": 0,
                 "skipped": 0,
+                "oldAnnualReportTotal": 0,
+                "oldAnnualReportCompleted": 0,
                 "yearBuckets": self._build_cached_year_buckets(
                     years,
                     year_totals,
@@ -131,6 +134,15 @@ class PdfService:
                 year_skipped,
             )
 
+        def summarize_old_reports(year_buckets: list[dict[str, Any]] | None) -> dict[str, int]:
+            buckets = year_buckets or []
+            total = sum(int(item.get("replacedTotal", 0) or 0) for item in buckets)
+            completed = sum(int(item.get("replacedCompleted", 0) or 0) for item in buckets)
+            return {
+                "oldAnnualReportTotal": total,
+                "oldAnnualReportCompleted": completed,
+            }
+
         def distribute_total(total: int) -> None:
             base = total // max(len(years), 1)
             remainder = total % max(len(years), 1)
@@ -141,6 +153,7 @@ class PdfService:
             reporter.log(level.upper(), self.stage, message)
 
         def on_progress(payload: dict[str, Any]) -> None:
+            nonlocal last_year_buckets
             phase = str(payload.get("phase", "") or "")
             if phase == "log":
                 return
@@ -158,6 +171,9 @@ class PdfService:
             eta_seconds = int(payload.get("eta_seconds", 0) or 0)
             current_year = int(payload.get("current_year", 0) or 0)
             year_buckets = payload.get("year_buckets")
+            if isinstance(year_buckets, list):
+                last_year_buckets = [dict(item) for item in year_buckets if isinstance(item, dict)]
+            visible_year_buckets = last_year_buckets if last_year_buckets is not None else refresh_year_buckets()
 
             if phase == "prepare":
                 distribute_total(max(total, current))
@@ -185,7 +201,8 @@ class PdfService:
                     "exists": exists,
                     "failed": failed,
                     "skipped": skipped,
-                    "yearBuckets": year_buckets if isinstance(year_buckets, list) else refresh_year_buckets(),
+                    **summarize_old_reports(visible_year_buckets),
+                    "yearBuckets": visible_year_buckets,
                     "speedPerMinute": speed_per_minute,
                     "etaSeconds": eta_seconds,
                     "currentYear": current_year or None,
@@ -203,6 +220,7 @@ class PdfService:
         except SpiderCancelled:
             raise
 
+        final_year_buckets = last_year_buckets if last_year_buckets is not None else refresh_year_buckets()
         payload = {
             "pdfTotal": result.pdf_total,
             "downloaded": result.downloaded,
@@ -213,7 +231,8 @@ class PdfService:
             "summaryPath": str(result.summary_path) if result.summary_path else "",
             "elapsedSeconds": result.elapsed_seconds,
             "summary": result.summary,
-            "yearBuckets": refresh_year_buckets(),
+            **summarize_old_reports(final_year_buckets),
+            "yearBuckets": final_year_buckets,
             "speedPerMinute": 0,
             "etaSeconds": 0,
         }

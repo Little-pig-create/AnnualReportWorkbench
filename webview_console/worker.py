@@ -114,6 +114,7 @@ class ExecutionWorker(threading.Thread):
             await self._run_stage(stage)
 
         self.run_state.status = "completed"
+        self.run_state.current_stage = None
         self.run_state.finished_at = now_iso()
         self.runtime.emit(
             events.run_completed(
@@ -162,11 +163,12 @@ class ExecutionWorker(threading.Thread):
 
     def _mark_cancelled(self) -> None:
         self.run_state.status = "cancelled"
-        self.run_state.finished_at = now_iso()
         current = self.run_state.current_stage
         if current and self.run_state.stages[current].status == "running":
             self.run_state.stages[current].status = "cancelled"
             self.run_state.stages[current].hint = "已终止"
+        self.run_state.current_stage = None
+        self.run_state.finished_at = now_iso()
         self.runtime.emit(events.run_cancelled(self.run_state.run_id, self.run_state.finished_at))
         self.runtime.persist_run_history(self.run_state.run_id)
         self.runtime.on_run_finished(self.run_state.run_id)
@@ -174,11 +176,12 @@ class ExecutionWorker(threading.Thread):
     def _mark_failed(self, error: str) -> None:
         self.run_state.status = "failed"
         self.run_state.error = error
-        self.run_state.finished_at = now_iso()
         current = self.run_state.current_stage
         if current and self.run_state.stages[current].status == "running":
             self.run_state.stages[current].status = "failed"
             self.run_state.stages[current].hint = "执行失败"
+        self.run_state.current_stage = None
+        self.run_state.finished_at = now_iso()
         self.reporter.log("ERROR", current or "system", error)
         self.runtime.emit(events.run_failed(self.run_state.run_id, self.run_state.finished_at, error))
         self.runtime.persist_run_history(self.run_state.run_id)

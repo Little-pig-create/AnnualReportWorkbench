@@ -1,25 +1,26 @@
 {
-  "version": "1.0.1",
-  "url": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench-Setup-1.0.1-onedir.exe",
+  "version": "1.0.2",
+  "url": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
   "notes": [
-    "README 增加项目简介与界面预览图",
-    "优化工作区配置保存逻辑，避免失败请求产生目录副作用",
-    "完善工作区与图表缓存联动体验"
+    "重构任务阶段状态逻辑，单阶段任务默认保留其他阶段的历史进度显示，只有全流程执行时才清空全部阶段",
+    "修复文本提取进度显示异常，进度条与仪表盘改为按实际执行推进，并提升百分比与速率显示精度",
+    "优化图表与统计逻辑，统一仪表盘和双图表展示体验，补充旧年报文件统计字段并排除 replaced_pdfs 的文本提取统计",
+    "改进多进程文本提取与运行时细节，避免保存失败时创建目录、修复关闭窗口时的任务收尾，并减少可见子窗体干扰"
   ],
   "force": false,
-  "sha256": "988122176b910bb8a5c52b7cf1fda4d1ac2f08008b5ac2f127425b1d230149ea",
-  "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench-Setup-1.0.1-onedir.exe",
+  "sha256": "a9dcf838ca6e5448a79fda5e9883f6b58f68276fa8a3148a181bba253098f58f",
+  "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
   "primaryChannel": "github",
   "downloads": {
     "installer": {
-      "fileName": "AnnualReportWorkbench-Setup-1.0.1-onedir.exe",
-      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench-Setup-1.0.1-onedir.exe",
-      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench-Setup-1.0.1-onedir.exe"
+      "fileName": "AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
+      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
+      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe"
     },
     "portable": {
       "fileName": "AnnualReportWorkbench.exe",
-      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench.exe",
-      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.1/AnnualReportWorkbench.exe"
+      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench.exe",
+      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench.exe"
     }
   }
 }

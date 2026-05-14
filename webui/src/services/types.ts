@@ -123,6 +123,8 @@ export interface IncrementalStatus {
     existingTotal: number;
     skippedTotal: number;
     pendingTotal: number;
+    oldAnnualReportTotal?: number;
+    oldAnnualReportExistingTotal?: number;
     summaryPath?: string;
     summaryExists?: boolean;
     summaryTrackedYears?: number;
@@ -189,6 +191,8 @@ export interface VisualizationIndexSnapshot {
     yearBuckets: VisualizationIndexYearBucket[];
     total: number;
     completed: number;
+    oldAnnualReportTotal?: number;
+    oldAnnualReportCompleted?: number;
     speedPerMinute?: number;
     etaSeconds?: number;
   };
