@@ -237,7 +237,65 @@ function formatPercent(value: number) {
 }
 
 const progressPercentText = computed(() => formatPercent(displayedProgress.value));
-const progressGaugeOption = computed(() => ({
+const chartPalette = computed(() => (
+  appStore.themeMode === "midnight"
+    ? {
+        gaugeTrack: "#243244",
+        gaugePrimary: "#60a5fa",
+        gaugeAxis: "#8ca3bd",
+        gaugeDetail: "#e5eef9",
+        teal: "#2dd4bf",
+        tealLight: "#67e8f9",
+        blue: "#60a5fa",
+        blueLight: "#93c5fd",
+        red: "#fb7185",
+        redLight: "#fda4af",
+        orange: "#f59e0b",
+        orangeLight: "#fdba74",
+        grid: "rgba(148, 163, 184, 0.14)",
+        axis: "#8ca3bd",
+        text: "#dbeafe",
+        tooltipBg: "rgba(8, 13, 23, 0.96)",
+        tooltipBorder: "rgba(96, 165, 250, 0.18)",
+        tooltipShadow: "0 18px 42px rgba(2, 6, 23, 0.52)",
+        axisLine: "rgba(148, 163, 184, 0.28)",
+        axisPointer: "rgba(148, 163, 184, 0.08)",
+        linePointBorder: "#08111c",
+        liveShadow: "rgba(45, 212, 191, 0.24)",
+        neutralTop: "#64748b",
+        neutralBottom: "#94a3b8",
+      }
+    : {
+        gaugeTrack: "#e5e7eb",
+        gaugePrimary: "#597ef7",
+        gaugeAxis: "#6b7280",
+        gaugeDetail: "#374151",
+        teal: "#15847a",
+        tealLight: "#3fb7ab",
+        blue: "#3c6df0",
+        blueLight: "#6b93ff",
+        red: "#ef4444",
+        redLight: "#fb7185",
+        orange: "#f59e0b",
+        orangeLight: "#fbbf24",
+        grid: "rgba(148, 163, 184, 0.18)",
+        axis: "#64748b",
+        text: "#334155",
+        tooltipBg: "rgba(255, 255, 255, 0.96)",
+        tooltipBorder: "rgba(148, 163, 184, 0.2)",
+        tooltipShadow: "0 16px 40px rgba(15, 23, 42, 0.14)",
+        axisLine: "rgba(148, 163, 184, 0.35)",
+        axisPointer: "rgba(15, 23, 42, 0.04)",
+        linePointBorder: "#ffffff",
+        liveShadow: "rgba(21, 132, 122, 0.18)",
+        neutralTop: "#c5d2e6",
+        neutralBottom: "#94a3b8",
+      }
+));
+
+const progressGaugeOption = computed(() => {
+  const palette = chartPalette.value;
+  return {
   backgroundColor: "transparent",
   tooltip: {
     formatter: "{a} <br/>{b} : {c}%",
@@ -258,7 +316,7 @@ const progressGaugeOption = computed(() => ({
       axisLine: {
         lineStyle: {
           width: 9,
-          color: [[1, "#e5e7eb"]],
+          color: [[1, palette.gaugeTrack]],
         },
       },
       radius: "86%",
@@ -268,14 +326,14 @@ const progressGaugeOption = computed(() => ({
         length: "48%",
         width: 4,
         itemStyle: {
-          color: "#597ef7",
+          color: palette.gaugePrimary,
         },
       },
       anchor: {
         show: false,
       },
       itemStyle: {
-        color: "#597ef7",
+        color: palette.gaugePrimary,
       },
       axisTick: {
         show: true,
@@ -283,7 +341,7 @@ const progressGaugeOption = computed(() => ({
         distance: -12,
         length: 7,
         lineStyle: {
-          color: "#6b7280",
+          color: palette.gaugeAxis,
           width: 1,
         },
       },
@@ -292,13 +350,13 @@ const progressGaugeOption = computed(() => ({
         distance: -14,
         length: 14,
         lineStyle: {
-          color: "#6b7280",
+          color: palette.gaugeAxis,
           width: 1.6,
         },
       },
       axisLabel: {
         distance: -34,
-        color: "#6b7280",
+        color: palette.gaugeAxis,
         fontSize: 12,
         fontWeight: 500,
       },
@@ -307,14 +365,14 @@ const progressGaugeOption = computed(() => ({
         offsetCenter: [0, "46%"],
         fontSize: 14,
         fontWeight: 500,
-        color: "#6b7280",
+        color: palette.gaugeAxis,
       },
       detail: {
         valueAnimation: true,
         offsetCenter: [0, "70%"],
         fontSize: 26,
         fontWeight: 700,
-        color: "#374151",
+        color: palette.gaugeDetail,
         formatter: (value: number) => `${formatFixed(value)}%`,
       },
       data: [
@@ -325,21 +383,8 @@ const progressGaugeOption = computed(() => ({
       ],
     },
   ],
-}));
-
-const COLORS = {
-  teal: "#15847a",
-  tealLight: "#3fb7ab",
-  blue: "#3c6df0",
-  blueLight: "#6b93ff",
-  red: "#ef4444",
-  redLight: "#fb7185",
-  orange: "#f59e0b",
-  orangeLight: "#fbbf24",
-  grid: "rgba(148, 163, 184, 0.18)",
-  axis: "#64748b",
-  text: "#334155",
-};
+  };
+});
 
 function gradientColor(top: string, bottom: string) {
   return {
@@ -356,6 +401,7 @@ function gradientColor(top: string, bottom: string) {
 }
 
 function makeTooltipFormatter(mode: "live" | "pdf" | "extract") {
+  const palette = chartPalette.value;
   return (params: any[]) => {
     const items = Array.isArray(params) ? params : [params];
     if (!items.length) return "";
@@ -368,7 +414,7 @@ function makeTooltipFormatter(mode: "live" | "pdf" | "extract") {
       });
     return `
       <div style="min-width:160px">
-        <div style="margin-bottom:8px;font-weight:700;color:#0f172a;">${title}</div>
+        <div style="margin-bottom:8px;font-weight:700;color:${palette.text};">${title}</div>
         ${lines.join("<br/>")}
       </div>
     `;
@@ -376,6 +422,7 @@ function makeTooltipFormatter(mode: "live" | "pdf" | "extract") {
 }
 
 function baseBarOption(categories: string[]) {
+  const palette = chartPalette.value;
   return {
     backgroundColor: "transparent",
     animationDurationUpdate: 240,
@@ -386,7 +433,7 @@ function baseBarOption(categories: string[]) {
       itemHeight: 14,
       icon: "roundRect",
       textStyle: {
-        color: COLORS.axis,
+        color: palette.axis,
         fontSize: 13,
         fontWeight: 600,
       },
@@ -402,13 +449,13 @@ function baseBarOption(categories: string[]) {
       type: "category",
       data: categories,
       axisLabel: {
-        color: COLORS.axis,
+        color: palette.axis,
         fontSize: 12,
         margin: 12,
       },
       axisLine: {
         lineStyle: {
-          color: "rgba(148, 163, 184, 0.35)",
+          color: palette.axisLine,
         },
       },
       axisTick: {
@@ -418,7 +465,7 @@ function baseBarOption(categories: string[]) {
     yAxis: {
       type: "value",
       axisLabel: {
-        color: COLORS.axis,
+        color: palette.axis,
         fontSize: 12,
         margin: 12,
       },
@@ -430,7 +477,7 @@ function baseBarOption(categories: string[]) {
       },
       splitLine: {
         lineStyle: {
-          color: COLORS.grid,
+          color: palette.grid,
           type: "dashed",
         },
       },
@@ -443,10 +490,11 @@ function findActiveBucket(buckets: any[]) {
 }
 
 function compactValueLabel(position: "inside" | "insideTop" | "top" = "insideTop") {
+  const palette = chartPalette.value;
   return {
     show: true,
     position,
-    color: position === "top" ? COLORS.text : "#ffffff",
+    color: position === "top" ? palette.text : palette.linePointBorder,
     fontSize: 11,
     fontWeight: 700,
     distance: 6,
@@ -611,16 +659,17 @@ const extractSummary = computed(() => {
 });
 
 const liveYearOption = computed(() => {
+  const palette = chartPalette.value;
   const categories = resolvedLiveYearBuckets.value.map((item: any) => String(item.year));
   return {
     ...baseBarOption(categories),
     tooltip: {
       trigger: "axis",
-      backgroundColor: "rgba(255,255,255,0.96)",
-      borderColor: "rgba(148,163,184,0.2)",
+      backgroundColor: palette.tooltipBg,
+      borderColor: palette.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: COLORS.text },
-      extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+      textStyle: { color: palette.text },
+      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
       formatter: makeTooltipFormatter("live"),
     },
     legend: { show: false },
@@ -636,7 +685,7 @@ const liveYearOption = computed(() => {
       label: {
         show: true,
         position: "top",
-        color: COLORS.text,
+        color: palette.text,
         fontSize: 12,
         fontWeight: 700,
         formatter: ({ value }: any) => (Number(value || 0) > 0 ? String(value) : ""),
@@ -644,7 +693,7 @@ const liveYearOption = computed(() => {
       itemStyle: {
         borderRadius: [14, 14, 4, 4],
         shadowBlur: 18,
-        shadowColor: "rgba(21, 132, 122, 0.18)",
+        shadowColor: palette.liveShadow,
       },
       data: resolvedLiveYearBuckets.value.map((item: any) => ({
         value: Number(item.count || 0),
@@ -653,7 +702,7 @@ const liveYearOption = computed(() => {
             ? gradientColor("#1f9d8f", "#0f766e")
             : item.status === "completed"
               ? gradientColor("#4f7ef7", "#2d5bdb")
-              : gradientColor("#c5d2e6", "#94a3b8"),
+              : gradientColor(palette.neutralTop, palette.neutralBottom),
         },
       })),
     }],
@@ -661,6 +710,7 @@ const liveYearOption = computed(() => {
 });
 
 const pdfOption = computed(() => {
+  const palette = chartPalette.value;
   const categories = livePdfBuckets.value.map((item: any) => String(item.year));
   const activeYear = findActiveBucket(livePdfBuckets.value)?.year;
   const completedLine = livePdfBuckets.value.map((item: any) => Number(item.completed || 0));
@@ -671,11 +721,11 @@ const pdfOption = computed(() => {
       ...baseBarOption(categories),
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(255,255,255,0.97)",
-        borderColor: "rgba(148,163,184,0.2)",
+        backgroundColor: palette.tooltipBg,
+        borderColor: palette.tooltipBorder,
         borderWidth: 1,
-        textStyle: { color: COLORS.text },
-        extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+        textStyle: { color: palette.text },
+        extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
         formatter: makeTooltipFormatter("pdf"),
       },
       series: [
@@ -685,8 +735,8 @@ const pdfOption = computed(() => {
           smooth: true,
           symbol: "circle",
           symbolSize: 7,
-          lineStyle: { width: 2, type: "dashed", color: COLORS.blue },
-          itemStyle: { color: COLORS.blue },
+          lineStyle: { width: 2, type: "dashed", color: palette.blue },
+          itemStyle: { color: palette.blue },
           data: totalLine,
         },
         {
@@ -698,8 +748,8 @@ const pdfOption = computed(() => {
           areaStyle: {
             color: gradientColor("rgba(63,183,171,0.28)", "rgba(63,183,171,0.02)"),
           },
-          lineStyle: { width: 3, color: COLORS.teal },
-          itemStyle: { color: COLORS.teal, borderColor: "#fff", borderWidth: 2 },
+          lineStyle: { width: 3, color: palette.teal },
+          itemStyle: { color: palette.teal, borderColor: palette.linePointBorder, borderWidth: 2 },
           data: completedLine.map((value, index) => ({
             value,
             itemStyle: Number(categories[index]) === Number(activeYear) ? {
@@ -713,15 +763,15 @@ const pdfOption = computed(() => {
   }
 
   return {
-    ...baseBarOption(categories),
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow", shadowStyle: { color: "rgba(15, 23, 42, 0.04)" } },
-      backgroundColor: "rgba(255,255,255,0.97)",
-      borderColor: "rgba(148,163,184,0.2)",
+      ...baseBarOption(categories),
+      tooltip: {
+        trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: palette.axisPointer } },
+      backgroundColor: palette.tooltipBg,
+      borderColor: palette.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: COLORS.text },
-      extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+      textStyle: { color: palette.text },
+      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
       formatter: makeTooltipFormatter("pdf"),
     },
     series: [
@@ -731,13 +781,13 @@ const pdfOption = computed(() => {
         stack: "pdf",
         barWidth: 24,
         itemStyle: {
-          color: gradientColor(COLORS.tealLight, COLORS.teal),
+          color: gradientColor(palette.tealLight, palette.teal),
           borderRadius: [10, 10, 0, 0],
         },
         data: livePdfBuckets.value.map((item: any) => ({
           value: Number(item.downloaded || 0) + Number(item.exists || 0),
           itemStyle: Number(item.year) === Number(activeYear) ? {
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: palette.linePointBorder,
             borderWidth: 2,
             shadowBlur: 24,
             shadowColor: "rgba(21, 132, 122, 0.28)",
@@ -749,12 +799,12 @@ const pdfOption = computed(() => {
         type: "bar",
         stack: "pdf",
         itemStyle: {
-          color: gradientColor(COLORS.redLight, COLORS.red),
+          color: gradientColor(palette.redLight, palette.red),
         },
         data: livePdfBuckets.value.map((item: any) => ({
           value: Number(item.failed || 0),
           itemStyle: Number(item.year) === Number(activeYear) ? {
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: palette.linePointBorder,
             borderWidth: 2,
           } : undefined,
         })),
@@ -768,7 +818,7 @@ const pdfOption = computed(() => {
           formatter: (_: any) => "",
         },
         itemStyle: {
-          color: gradientColor(COLORS.orangeLight, COLORS.orange),
+          color: gradientColor(palette.orangeLight, palette.orange),
           borderRadius: [10, 10, 0, 0],
         },
         data: livePdfBuckets.value.map((item: any) => ({
@@ -781,7 +831,7 @@ const pdfOption = computed(() => {
             },
           },
           itemStyle: Number(item.year) === Number(activeYear) ? {
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: palette.linePointBorder,
             borderWidth: 2,
             shadowBlur: 20,
             shadowColor: "rgba(245, 158, 11, 0.25)",
@@ -793,6 +843,7 @@ const pdfOption = computed(() => {
 });
 
 const extractOption = computed(() => {
+  const palette = chartPalette.value;
   const categories = liveExtractBuckets.value.map((item: any) => String(item.year));
   const activeYear = findActiveBucket(liveExtractBuckets.value)?.year;
   const completedLine = liveExtractBuckets.value.map((item: any) => Number(item.completed || 0));
@@ -803,11 +854,11 @@ const extractOption = computed(() => {
       ...baseBarOption(categories),
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(255,255,255,0.97)",
-        borderColor: "rgba(148,163,184,0.2)",
+        backgroundColor: palette.tooltipBg,
+        borderColor: palette.tooltipBorder,
         borderWidth: 1,
-        textStyle: { color: COLORS.text },
-        extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+        textStyle: { color: palette.text },
+        extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
         formatter: makeTooltipFormatter("extract"),
       },
       series: [
@@ -817,8 +868,8 @@ const extractOption = computed(() => {
           smooth: true,
           symbol: "circle",
           symbolSize: 7,
-          lineStyle: { width: 2, type: "dashed", color: COLORS.blue },
-          itemStyle: { color: COLORS.blue },
+          lineStyle: { width: 2, type: "dashed", color: palette.blue },
+          itemStyle: { color: palette.blue },
           data: totalLine,
         },
         {
@@ -831,7 +882,7 @@ const extractOption = computed(() => {
             color: gradientColor("rgba(58,155,214,0.24)", "rgba(58,155,214,0.02)"),
           },
           lineStyle: { width: 3, color: "#155e75" },
-          itemStyle: { color: "#155e75", borderColor: "#fff", borderWidth: 2 },
+          itemStyle: { color: "#155e75", borderColor: palette.linePointBorder, borderWidth: 2 },
           data: completedLine.map((value, index) => ({
             value,
             itemStyle: Number(categories[index]) === Number(activeYear) ? {
@@ -845,15 +896,15 @@ const extractOption = computed(() => {
   }
 
   return {
-    ...baseBarOption(categories),
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow", shadowStyle: { color: "rgba(15, 23, 42, 0.04)" } },
-      backgroundColor: "rgba(255,255,255,0.97)",
-      borderColor: "rgba(148,163,184,0.2)",
+      ...baseBarOption(categories),
+      tooltip: {
+        trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: palette.axisPointer } },
+      backgroundColor: palette.tooltipBg,
+      borderColor: palette.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: COLORS.text },
-      extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+      textStyle: { color: palette.text },
+      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
       formatter: makeTooltipFormatter("extract"),
     },
     series: [
@@ -869,7 +920,7 @@ const extractOption = computed(() => {
         data: liveExtractBuckets.value.map((item: any) => ({
           value: Number(item.extracted || 0) + Number(item.exists || 0),
           itemStyle: Number(item.year) === Number(activeYear) ? {
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: palette.linePointBorder,
             borderWidth: 2,
             shadowBlur: 24,
             shadowColor: "rgba(21, 94, 117, 0.26)",
@@ -885,7 +936,7 @@ const extractOption = computed(() => {
           formatter: (_: any) => "",
         },
         itemStyle: {
-          color: gradientColor(COLORS.redLight, COLORS.red),
+          color: gradientColor(palette.redLight, palette.red),
           borderRadius: [10, 10, 0, 0],
         },
         data: liveExtractBuckets.value.map((item: any) => ({
@@ -898,7 +949,7 @@ const extractOption = computed(() => {
             },
           },
           itemStyle: Number(item.year) === Number(activeYear) ? {
-            borderColor: "rgba(255,255,255,0.95)",
+            borderColor: palette.linePointBorder,
             borderWidth: 2,
             shadowBlur: 20,
             shadowColor: "rgba(239, 68, 68, 0.22)",
@@ -935,77 +986,77 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.console-page { --command-log-panel-height: 560px; display: grid; gap: 24px; }
-.console-head { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; }
+.console-page { --command-log-panel-height: 440px; display: grid; gap: 16px; }
+.console-head { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
 .console-head__copy { display: grid; align-content: center; min-width: 0; }
-.console-head__copy h2 { margin: 8px 0 12px; font-size: 40px; line-height: 1.02; }
-.console-head__copy p:last-child { margin: 0; max-width: 760px; color: var(--muted); line-height: 1.7; }
-.console-head__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; }
-.action { min-height: 58px; border: 0; border-radius: 18px; font-weight: 700; cursor: pointer; }
-.action.subtle { background: #edf2ff; color: #1d4ed8; }
-.action.primary { background: linear-gradient(135deg, #0f766e, #155e75); color: white; }
-.action.warning { background: #fff7ed; color: #c2410c; }
-.action.danger { background: #991b1b; color: white; }
+.console-head__copy h2 { margin: 6px 0 10px; font-size: var(--type-page-title); line-height: 1.12; }
+.console-head__copy p:last-child { margin: 0; max-width: 680px; color: var(--muted); line-height: 1.6; font-size: var(--type-body); }
+.console-head__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start; }
+.action { min-height: 44px; border: 0; border-radius: 14px; font-weight: 700; cursor: pointer; }
+.action.subtle { background: var(--control-subtle-bg); color: var(--control-subtle-text); }
+.action.primary { background: linear-gradient(135deg, #0f766e, #155e75); color: #fff; }
+.action.warning { background: var(--control-warning-bg); color: var(--control-warning-text); }
+.action.danger { background: var(--control-danger-bg); color: var(--control-danger-text); }
 .action:disabled { opacity: 0.45; cursor: not-allowed; }
-.console-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; align-items: stretch; }
-.overview-stack { display: flex; flex-direction: column; justify-content: flex-start; gap: 22px; height: 100%; }
-.overview-stack__logs { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 14px; height: var(--command-log-panel-height); min-height: var(--command-log-panel-height); max-height: var(--command-log-panel-height); min-width: 0; flex: none; }
+.console-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; align-items: stretch; }
+.overview-stack { display: flex; flex-direction: column; justify-content: flex-start; gap: 16px; height: 100%; }
+.overview-stack__logs { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; height: var(--command-log-panel-height); min-height: var(--command-log-panel-height); max-height: var(--command-log-panel-height); min-width: 0; flex: none; }
 .overview-stack__logs :deep(.console) { height: 100%; min-height: 100%; max-height: 100%; }
-.focus-panel { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; flex: 1; min-height: 0; }
+.focus-panel { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; flex: 1; min-height: 0; }
 .focus-panel__gauge { display: grid; place-items: center; width: 100%; }
-.gauge-card { width: 100%; max-width: 560px; padding-top: 0; }
-.gauge-card :deep(.chart) { min-height: 320px; }
-.focus-panel__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-content: start; }
-.focus-panel__meta article,.live-card { display: flex; flex-direction: column; justify-content: flex-start; min-height: 168px; padding: 18px 20px; border-radius: 20px; background: var(--panel-alt); box-sizing: border-box; }
+.gauge-card { width: 100%; max-width: 420px; padding-top: 0; }
+.gauge-card :deep(.chart) { min-height: 236px; height: 236px; }
+.focus-panel__meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-content: start; }
+.focus-panel__meta article,.live-card { display: flex; flex-direction: column; justify-content: flex-start; min-height: 118px; padding: 12px 14px; border-radius: 16px; background: var(--panel-alt); box-sizing: border-box; }
 .focus-panel__meta small,.live-card small { display: block; color: var(--muted); margin-bottom: 10px; }
 .focus-panel__meta strong,.live-card strong { display: block; line-height: 1.4; }
-.live-card span { display: block; margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.live-card--accent { background: linear-gradient(135deg, rgba(15,118,110,0.14), rgba(37,99,235,0.1)); }
-.section-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
-.section-header h3 { margin: 4px 0 0; font-size: 24px; }
+.live-card span { display: block; margin-top: 8px; color: var(--muted); font-size: var(--type-body-small); line-height: 1.45; }
+.live-card--accent { background: var(--accent-panel-soft); }
+.section-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.section-header h3 { margin: 4px 0 0; font-size: var(--type-section-title); }
 .section-header--chart { margin-bottom: 10px; }
 .chart-header-right { display: grid; justify-items: end; gap: 10px; }
 .chart-header-meta { display: grid; justify-items: end; gap: 8px; }
-.view-switch { display: inline-flex; gap: 6px; padding: 5px; border-radius: 999px; background: rgba(241, 245, 249, 0.94); border: 1px solid rgba(226, 232, 240, 0.95); }
-.view-switch button { border: 0; min-height: 34px; padding: 0 14px; border-radius: 999px; background: transparent; color: #64748b; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .18s ease; }
-.view-switch button.active { background: linear-gradient(135deg, rgba(15,118,110,0.12), rgba(59,130,246,0.12)); color: #0f766e; box-shadow: inset 0 0 0 1px rgba(15,118,110,0.12); }
-.speed-badge { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: 0.01em; }
-.speed-badge--pdf { background: linear-gradient(135deg, rgba(21, 132, 122, 0.14), rgba(60, 109, 240, 0.12)); color: #155e75; }
-.speed-badge--extract { background: linear-gradient(135deg, rgba(21, 94, 117, 0.12), rgba(99, 102, 241, 0.12)); color: #334155; }
-.chart-caption { color: var(--muted); font-size: 12px; }
-.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 6px 0 8px; }
-.summary-card { position: relative; overflow: hidden; min-height: 90px; padding: 16px 18px; border-radius: 18px; border: 1px solid rgba(226, 232, 240, 0.9); background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9)); }
-.summary-card::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.8), transparent 34%); pointer-events: none; }
+.view-switch { display: inline-flex; gap: 6px; padding: 5px; border-radius: 999px; background: var(--field-bg-soft); border: 1px solid var(--line); }
+.view-switch button { border: 0; min-height: 34px; padding: 0 14px; border-radius: 999px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; cursor: pointer; transition: all .18s ease; }
+.view-switch button.active { background: var(--accent-panel-soft); color: var(--brand); box-shadow: inset 0 0 0 1px rgba(15,118,110,0.12); }
+.speed-badge { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+.speed-badge--pdf { background: var(--accent-panel-soft); color: var(--brand-strong); }
+.speed-badge--extract { background: var(--accent-panel-soft-alt); color: var(--text-soft); }
+.chart-caption { color: var(--muted); font-size: var(--type-body-small); }
+.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 2px 0 4px; }
+.summary-card { position: relative; overflow: hidden; min-height: 68px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-card-strong-soft); }
+.summary-card::after { content: ""; position: absolute; inset: 0; background: var(--surface-card-highlight-strong); pointer-events: none; }
 .summary-card small { display: block; margin-bottom: 8px; color: var(--muted); }
-.summary-card strong { display: block; font-size: 28px; line-height: 1.1; color: #0f172a; }
-.summary-card span { display: block; margin-top: 8px; color: #64748b; font-size: 12px; line-height: 1.45; }
-.summary-card--strong { background: linear-gradient(135deg, rgba(15,118,110,0.12), rgba(59,130,246,0.08)); border-color: rgba(125, 211, 252, 0.32); }
+.summary-card strong { display: block; font-size: 18px; line-height: 1.1; color: var(--text); }
+.summary-card span { display: block; margin-top: 6px; color: var(--muted); font-size: var(--type-caption); line-height: 1.4; }
+.summary-card--strong { background: var(--accent-panel-soft); border-color: rgba(125, 211, 252, 0.32); }
 .mono { font-family: Consolas, "Courier New", monospace; color: var(--muted); }
-.stage-stack { display: grid; gap: 16px; align-content: start; }
-.status-wall,.live-strip { display: grid; gap: 14px; }
+.stage-stack { display: grid; gap: 12px; align-content: start; }
+.status-wall,.live-strip { display: grid; gap: 12px; }
 .status-wall { height: 100%; align-content: start; }
-.live-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr); gap: 18px; }
+.live-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr); gap: 12px; }
 .live-chart-card,.chart-card { position: relative; overflow: hidden; }
-.live-chart-card::before,.chart-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at top right, rgba(255,255,255,0.75), transparent 38%); pointer-events: none; }
-.live-chart-card { border-radius: 24px; background: linear-gradient(180deg, rgba(247, 250, 252, 0.92), rgba(241, 245, 249, 0.85)); padding: 10px 14px 4px; border: 1px solid rgba(226, 232, 240, 0.75); }
-.chart-card { display: grid; grid-template-rows: auto auto minmax(0, 1fr); border: 1px solid rgba(226, 232, 240, 0.75); background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06); }
-.chart-card--pdf { background-image: radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); }
-.chart-card--extract { background-image: radial-gradient(circle at top right, rgba(21,132,122,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92)); }
-.chart-card__viewport { min-height: 420px; }
-.chart-card__viewport :deep(.chart) { min-height: 420px; height: 420px; }
+.live-chart-card::before,.chart-card::before { content: ""; position: absolute; inset: 0; background: var(--surface-card-highlight); pointer-events: none; }
+.live-chart-card { border-radius: 18px; background: var(--surface-card-strong-soft); padding: 6px 10px 2px; border: 1px solid var(--line); }
+.chart-card { display: grid; grid-template-rows: auto auto minmax(0, 1fr); border: 1px solid var(--line); background: var(--surface-card-strong); box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06); }
+.chart-card--pdf { background-image: radial-gradient(circle at top right, rgba(59,130,246,0.08), transparent 34%), var(--surface-card-strong); }
+.chart-card--extract { background-image: radial-gradient(circle at top right, rgba(21,132,122,0.08), transparent 34%), var(--surface-card-strong); }
+.chart-card__viewport { min-height: 320px; }
+.chart-card__viewport :deep(.chart) { min-height: 320px; height: 320px; }
 .live-chart-card,.chart-card,.status-wall,.live-strip,.overview-stack { min-width: 0; }
-.live-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; grid-auto-rows: 168px; }
-.metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-.mini-link { border: 0; background: #eef2ff; color: #1d4ed8; border-radius: 999px; padding: 10px 14px; cursor: pointer; }
+.live-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; grid-auto-rows: 118px; }
+.metrics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mini-link { border: 0; background: var(--control-tint-bg); color: var(--control-tint-text); border-radius: 999px; padding: 10px 14px; cursor: pointer; }
 @media (max-width: 1180px) {
   .console-head,.console-grid,.metrics-grid,.live-layout,.focus-panel,.focus-panel__meta,.live-grid,.summary-grid { grid-template-columns: 1fr; }
-  .console-head__copy h2 { font-size: 36px; }
-  .console-page { --command-log-panel-height: 460px; }
+  .console-head__copy h2 { font-size: var(--type-page-title); }
+  .console-page { --command-log-panel-height: 380px; }
   .overview-stack__logs { height: var(--command-log-panel-height); min-height: var(--command-log-panel-height); max-height: var(--command-log-panel-height); }
   .gauge-card { max-width: 100%; }
-  .gauge-card :deep(.chart) { min-height: 280px; }
+  .gauge-card :deep(.chart) { min-height: 220px; height: 220px; }
   .chart-header-right,.chart-header-meta { justify-items: start; }
-  .chart-card__viewport { min-height: 360px; }
-  .chart-card__viewport :deep(.chart) { min-height: 360px; height: 360px; }
+  .chart-card__viewport { min-height: 280px; }
+  .chart-card__viewport :deep(.chart) { min-height: 280px; height: 280px; }
 }
 </style>

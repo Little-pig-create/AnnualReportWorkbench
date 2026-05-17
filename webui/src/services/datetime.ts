@@ -19,7 +19,7 @@ export function formatDateTime(value?: string | null, fallback = "-") {
   const hour = pad(date.getHours());
   const minute = pad(date.getMinutes());
   const second = pad(date.getSeconds());
-  return `${year}年${month}月${day}日 ${hour}时${minute}分${second}秒`;
+  return `${year}年${month}月${day}日 ${hour}:${minute}:${second}`;
 }
 
 export function formatDuration(start?: string | null, end?: string | null, fallback = "-") {
@@ -44,4 +44,28 @@ export function formatDuration(start?: string | null, end?: string | null, fallb
     return `${minutes}分${seconds}秒`;
   }
   return `${seconds}秒`;
+}
+
+export function formatElapsed(start?: string | null, fallback = "-") {
+  if (!start) return fallback;
+
+  const startedAt = new Date(String(start).trim());
+  if (Number.isNaN(startedAt.getTime())) {
+    return fallback;
+  }
+
+  const now = Date.now();
+  const diffMs = Math.max(0, now - startedAt.getTime());
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${pad(minutes)}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${pad(seconds)}s`;
+  }
+  return `${seconds}s`;
 }

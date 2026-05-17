@@ -1,89 +1,179 @@
 <template>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="topbar__brand">
-        <p class="topbar__eyebrow">ANNUAL REPORT WORKBENCH</p>
-        <h1>桌面控制台</h1>
-        <span>用于公告链接抓取、PDF 下载与文本提取的一体化桌面工作台。</span>
-        <div class="topbar__author">
-          <p class="topbar__author-title">开发者信息</p>
-          <div class="topbar__author-tags">
-            <div class="topbar__author-item topbar__author-item--highlight">
-              <small>项目作者</small>
-              <strong>xiaomaojian</strong>
+  <div class="workbench-shell" :data-sidebar-mode="appStore.sidebarMode">
+    <aside class="sidebar surface">
+      <div class="sidebar__top">
+        <div class="brand-block">
+          <div class="brand-block__icon">AR</div>
+          <p class="brand-block__eyebrow">ANNUAL REPORT WORKBENCH</p>
+          <h1 class="brand-block__title">年报工作台</h1>
+        </div>
+      </div>
+
+      <div class="sidebar__nav">
+        <section v-for="group in navGroups" :key="group.key" class="nav-group">
+          <p class="nav-group__title">{{ group.title }}</p>
+          <button
+            v-for="item in group.items"
+            :key="item.key"
+            class="nav-item"
+            :class="{ active: appStore.currentPage === item.key }"
+            :title="item.label"
+            type="button"
+            @click="appStore.setPage(item.key)"
+          >
+            <span class="nav-item__icon">
+              <component :is="item.icon" :size="18" />
+            </span>
+            <span class="nav-item__copy">
+              <strong>{{ item.label }}</strong>
+            </span>
+          </button>
+        </section>
+      </div>
+
+      <div class="sidebar__bottom">
+        <button class="nav-item nav-item--utility" type="button" :title="themeToggleTitle" @click="toggleTheme">
+          <span class="nav-item__icon">
+            <component :is="appStore.themeMode === 'sunrise' ? MoonStar : Sunrise" :size="18" />
+          </span>
+          <span class="nav-item__copy">
+            <strong>{{ themeToggleLabel }}</strong>
+          </span>
+        </button>
+
+        <button
+          class="nav-item nav-item--utility"
+          type="button"
+          :aria-label="isSidebarExpanded ? '折叠侧边栏' : '展开侧边栏'"
+          @click="appStore.toggleSidebar()"
+        >
+          <span class="nav-item__icon">
+            <component :is="isSidebarExpanded ? PanelLeftClose : PanelLeftOpen" :size="18" />
+          </span>
+          <span class="nav-item__copy">
+            <strong>折叠侧边栏</strong>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <div ref="mainPanelRef" class="main-panel" @scroll="handleMainPanelScroll">
+      <section
+        class="progress-header surface"
+        :data-state="taskStore.run.status"
+        :data-condensed="shouldCondenseProgress ? 'true' : 'false'"
+      >
+        <div class="progress-header__top">
+          <div class="progress-headline">
+            <span class="progress-badge" :data-state="taskStore.run.status">{{ runStatusText }}</span>
+            <div class="progress-headline__copy">
+              <h2>{{ progressHeadline }}</h2>
+              <span>{{ currentStageText }} · {{ progressSubline }}</span>
             </div>
-            <div class="topbar__author-item topbar__author-item--highlight topbar__author-item--version">
-              <small>版本号</small>
-              <strong>{{ appStore.about?.version || "-" }}</strong>
-            </div>
-            <a
-              class="topbar__author-item topbar__author-item--link topbar__author-item--gitee"
-              href="https://gitee.com/xiaozhusir/AnnualReportWorkbench"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <small>项目仓库</small>
-              <strong>https://gitee.com/xiaozhusir/AnnualReportWorkbench</strong>
-            </a>
-            <a
-              class="topbar__author-item topbar__author-item--link topbar__author-item--github"
-              href="https://github.com/Little-pig-create/AnnualReportWorkbench"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <small>项目仓库</small>
-              <strong>https://github.com/Little-pig-create/AnnualReportWorkbench</strong>
-            </a>
+          </div>
+
+          <div class="progress-sidefacts">
+            <article>
+              <small>运行模式</small>
+              <strong>{{ runModeText }}</strong>
+            </article>
+            <article>
+              <small>开始时间</small>
+              <strong>{{ formatDateTime(taskStore.run.startedAt, "等待任务启动") }}</strong>
+            </article>
+            <article>
+              <small>已运行</small>
+              <strong>{{ elapsedText }}</strong>
+            </article>
           </div>
         </div>
-      </div>
 
-      <div class="topbar__meta">
-        <div class="status-chip" :data-state="taskStore.run.status">
-          <strong>{{ runStatusText }}</strong>
-          <small>{{ currentStageText }}</small>
+        <div class="progress-hero">
+          <div class="progress-hero__summary">
+            <div class="progress-hero__value">{{ progressPercentText }}</div>
+            <div class="progress-hero__caption">总进度</div>
+          </div>
+
+          <div class="progress-hero__track">
+            <div class="energy-track">
+              <div class="energy-track__fill" :style="{ width: progressPercentText }">
+                <span class="energy-track__glow"></span>
+              </div>
+            </div>
+            <div class="progress-hero__meta">
+              <span>{{ runModeText }}</span>
+              <span>{{ progressMetricText }}</span>
+            </div>
+          </div>
         </div>
-        <div class="status-chip muted">
-          <strong>{{ runModeText }}</strong>
-          <small>{{ formatDateTime(taskStore.run.startedAt, "等待任务启动") }}</small>
+
+        <div class="stage-progress-strip">
+          <article
+            v-for="item in stageProgressCards"
+            :key="item.key"
+            class="stage-progress-card"
+            :class="{ active: item.isCurrent }"
+            :data-stage="item.key"
+          >
+            <div class="stage-progress-card__header">
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.percentText }}</span>
+            </div>
+            <div class="stage-progress-card__track">
+              <div class="stage-progress-card__fill" :style="{ width: item.percentText }"></div>
+            </div>
+            <div class="stage-progress-card__footer">
+              <span>{{ item.hint }}</span>
+              <span>{{ item.metric }}</span>
+            </div>
+          </article>
         </div>
-      </div>
-    </header>
+      </section>
 
-    <nav class="dock">
-      <button
-        v-for="item in navItems"
-        :key="item.key"
-        :class="{ active: appStore.currentPage === item.key }"
-        @click="appStore.setPage(item.key)"
-      >
-        <span>{{ item.eyebrow }}</span>
-        <strong>{{ item.label }}</strong>
-      </button>
-    </nav>
-
-    <main class="content-frame">
-      <component :is="currentPage" />
-    </main>
+      <main class="content-frame">
+        <Transition name="page-swap" mode="out-in">
+          <component :is="currentPage" :key="appStore.currentPage" />
+        </Transition>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch } from "vue";
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  FileScan,
+  FileText,
+  FolderOpen,
+  Gauge,
+  History,
+  Info,
+  Link,
+  MoonStar,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sunrise,
+  Terminal,
+} from "@lucide/vue";
 import { bridge } from "@/services/bridge";
-import { formatDateTime } from "@/services/datetime";
+import { formatDateTime, formatDuration, formatElapsed } from "@/services/datetime";
 import { getErrorMessage } from "@/services/errors";
 import { mountDesktopEventBus } from "@/services/eventBus";
 import { useAppStore } from "@/stores/app";
 import { useHistoryStore } from "@/stores/history";
 import { useSettingsStore } from "@/stores/settings";
 import { useTaskStore } from "@/stores/task";
-import type { PageKey } from "@/services/types";
+import type { PageKey, StageName, StageState } from "@/services/types";
 
 const appStore = useAppStore();
 const historyStore = useHistoryStore();
 const settingsStore = useSettingsStore();
 const taskStore = useTaskStore();
+
+const nowTick = ref(Date.now());
+const mainPanelRef = ref<HTMLElement | null>(null);
+const isProgressCondensed = ref(false);
+let elapsedTimer: number | null = null;
 
 const pageMap = {
   command: defineAsyncComponent(() => import("@/pages/CommandCenter.vue")),
@@ -96,47 +186,209 @@ const pageMap = {
   about: defineAsyncComponent(() => import("@/pages/AboutPage.vue")),
 };
 
-const navItems: Array<{ key: PageKey; label: string; eyebrow: string }> = [
-  { key: "command", label: "任务总览", eyebrow: "总览" },
-  { key: "workspace", label: "工作区", eyebrow: "路径" },
-  { key: "links", label: "链接配置", eyebrow: "链接" },
-  { key: "pdf", label: "PDF 配置", eyebrow: "PDF" },
-  { key: "extract", label: "提取配置", eyebrow: "提取" },
-  { key: "logs", label: "日志中心", eyebrow: "日志" },
-  { key: "history", label: "历史任务", eyebrow: "历史" },
-  { key: "about", label: "关于软件", eyebrow: "说明" },
+const navGroups = [
+  {
+    key: "core",
+    title: "核心工作",
+    items: [
+      { key: "command" as PageKey, label: "任务总览", icon: Gauge },
+      { key: "workspace" as PageKey, label: "工作区", icon: FolderOpen },
+    ],
+  },
+  {
+    key: "config",
+    title: "阶段配置",
+    items: [
+      { key: "links" as PageKey, label: "链接配置", icon: Link },
+      { key: "pdf" as PageKey, label: "PDF 配置", icon: FileText },
+      { key: "extract" as PageKey, label: "提取配置", icon: FileScan },
+    ],
+  },
+  {
+    key: "system",
+    title: "记录与系统",
+    items: [
+      { key: "logs" as PageKey, label: "日志中心", icon: Terminal },
+      { key: "history" as PageKey, label: "历史任务", icon: History },
+      { key: "about" as PageKey, label: "关于软件", icon: Info },
+    ],
+  },
 ];
 
+const stageMeta: Record<StageName, { label: string }> = {
+  links: { label: "链接抓取" },
+  pdf: { label: "PDF 下载" },
+  extract: { label: "文本提取" },
+};
+
+function formatPercent(value: number) {
+  const percent = Math.min(100, Math.max(0, Number(value || 0) * 100));
+  if (percent === 0 || percent === 100) return `${Math.round(percent)}%`;
+  if (percent >= 10) return `${percent.toFixed(1)}%`;
+  return `${percent.toFixed(2)}%`;
+}
+
+function stageMetric(stage: StageState) {
+  const current = Number(stage.progress?.current || 0);
+  const total = Number(stage.progress?.total || 0);
+  if (total > 0) {
+    return `${Math.min(current, total)}/${total}`;
+  }
+  return formatPercent(Number(stage.progress?.percent || 0));
+}
+
+function stageHint(stage: StageState) {
+  if (stage.hint) return stage.hint;
+  return {
+    pending: "等待执行",
+    running: "执行中",
+    completed: "已完成",
+    failed: "执行失败",
+    cancelled: "已终止",
+  }[stage.status];
+}
+
 const currentPage = computed(() => pageMap[appStore.currentPage]);
+const isSidebarExpanded = computed(() => appStore.sidebarMode === "expanded");
+const hasTerminalProgressState = computed(() => ["completed", "failed", "cancelled"].includes(taskStore.run.status));
+const shouldCondenseProgress = computed(() => {
+  if (hasTerminalProgressState.value) return true;
+  if (!isProgressCondensed.value) return false;
+  return ["running", "paused", "cancelling"].includes(taskStore.run.status);
+});
 
-const runStatusText = computed(() => ({
-  idle: "空闲",
-  running: "运行中",
-  paused: "已暂停",
-  completed: "已完成",
-  failed: "失败",
-  cancelling: "终止中",
-  cancelled: "已终止",
-}[taskStore.run.status]));
+const runStatusText = computed(
+  () =>
+    ({
+      idle: "空闲",
+      running: "运行中",
+      paused: "已暂停",
+      completed: "已完成",
+      failed: "失败",
+      cancelling: "终止中",
+      cancelled: "已终止",
+    })[taskStore.run.status],
+);
 
-const currentStageText = computed(() => ({
-  links: "公告链接抓取",
-  pdf: "PDF 下载",
-  extract: "文本提取",
-  null: taskStore.run.status === "paused" ? "任务暂停中" : "空闲",
-}[String(taskStore.run.currentStage)]));
+const activeStage = computed(() => {
+  const currentStage = taskStore.run.currentStage;
+  return currentStage ? taskStore.stages[currentStage] : null;
+});
 
-const runModeText = computed(() => ({
-  links: "仅抓链接",
-  pdf: "仅下载 PDF",
-  extract: "仅提取文本",
-  pipeline: "完整流程",
-  null: "未启动",
-}[String(taskStore.run.mode)]));
+const currentStageText = computed(() => {
+  const currentStage = taskStore.run.currentStage;
+  if (currentStage) {
+    return `当前阶段：${stageMeta[currentStage].label}`;
+  }
+  if (taskStore.run.status === "paused") return "当前阶段：任务暂停中";
+  if (taskStore.run.status === "completed") return "当前阶段：全部完成";
+  if (taskStore.run.status === "failed") return "当前阶段：执行失败";
+  if (taskStore.run.status === "cancelled") return "当前阶段：任务已终止";
+  return "当前阶段：等待开始";
+});
+
+const runModeText = computed(
+  () =>
+    ({
+      links: "仅抓链接",
+      pdf: "仅下载 PDF",
+      extract: "仅提取文本",
+      pipeline: "完整流程",
+      null: "未启动",
+    })[String(taskStore.run.mode)],
+);
+
+const elapsedText = computed(() => {
+  if (!taskStore.run.startedAt) return "00:00";
+  if (taskStore.run.finishedAt) {
+    return formatDuration(taskStore.run.startedAt, taskStore.run.finishedAt, "00:00");
+  }
+  return formatElapsed(taskStore.run.startedAt, "00:00");
+});
+
+const progressFraction = computed(() => Number(taskStore.currentTaskProgress || 0));
+const progressPercentText = computed(() => formatPercent(progressFraction.value));
+
+const progressHeadline = computed(() => {
+  if (taskStore.run.status === "running") return "任务正在执行";
+  if (taskStore.run.status === "paused") return "任务已暂停";
+  if (taskStore.run.status === "completed") return "任务执行完成";
+  if (taskStore.run.status === "failed") return "任务执行失败";
+  if (taskStore.run.status === "cancelling") return "正在终止任务";
+  if (taskStore.run.status === "cancelled") return "任务已终止";
+  return "准备开始新任务";
+});
+
+const progressSubline = computed(() => {
+  if (taskStore.run.status === "idle") return "配置完成后即可启动。";
+  if (taskStore.run.error) return taskStore.run.error;
+  return activeStage.value?.hint || "等待阶段信息更新。";
+});
+
+const progressMetricText = computed(() => {
+  const stage = activeStage.value;
+  if (!stage) return "暂无进度";
+  return stageMetric(stage);
+});
+
+const stageProgressCards = computed(() =>
+  (Object.values(taskStore.stages) as StageState[]).map((stage) => ({
+    key: stage.name,
+    label: stageMeta[stage.name].label,
+    percentText: formatPercent(Number(stage.progress?.percent || 0)),
+    hint: stageHint(stage),
+    metric: stageMetric(stage),
+    isCurrent: taskStore.run.currentStage === stage.name,
+  })),
+);
+
+const themeToggleLabel = computed(() => (appStore.themeMode === "sunrise" ? "切换深夜" : "切换日出"));
+const themeToggleTitle = computed(() => (appStore.themeMode === "sunrise" ? "切换到深夜模式" : "切换到日出模式"));
+
+function toggleTheme() {
+  appStore.setTheme(appStore.themeMode === "sunrise" ? "midnight" : "sunrise");
+}
+
+function handleMainPanelScroll() {
+  const top = mainPanelRef.value?.scrollTop || 0;
+  isProgressCondensed.value = top > 24;
+}
+
+watch(
+  () => [taskStore.run.startedAt, taskStore.run.finishedAt] as const,
+  ([startedAt, finishedAt]) => {
+    if (elapsedTimer !== null) {
+      window.clearInterval(elapsedTimer);
+      elapsedTimer = null;
+    }
+    if (startedAt && !finishedAt) {
+      elapsedTimer = window.setInterval(() => {
+        nowTick.value = Date.now();
+      }, 1000);
+    } else {
+      nowTick.value = Date.now();
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => taskStore.run.status,
+  (status) => {
+    if (["running", "paused", "cancelling"].includes(status)) {
+      historyStore.startAutoRefresh();
+      return;
+    }
+    historyStore.stopAutoRefresh();
+    historyStore.load().catch(() => {});
+  },
+  { immediate: true },
+);
 
 onMounted(async () => {
-  mountDesktopEventBus(taskStore);
+  appStore.hydrateUiPrefs();
   taskStore.loadNotificationPrefs();
+
   const originalHandleEvent = taskStore.handleEvent.bind(taskStore);
   taskStore.handleEvent = ((event: any) => {
     if (event?.event === "app.close_requested") {
@@ -164,12 +416,19 @@ onMounted(async () => {
 
   try {
     await bridge.waitUntilReady();
+    mountDesktopEventBus(taskStore);
     await Promise.all([
       appStore.loadAbout().catch(() => {}),
-      settingsStore.load(),
-      taskStore.hydrateActiveRun(),
+      settingsStore.load().catch((error) => {
+        appStore.showAlert(getErrorMessage(error, "配置加载失败"), "error");
+      }),
+      taskStore.hydrateActiveRun().catch((error) => {
+        appStore.showAlert(getErrorMessage(error, "任务状态加载失败"), "error");
+      }),
       taskStore.loadVisualizationIndex().catch(() => {}),
-      historyStore.load(),
+      historyStore.load().catch((error) => {
+        appStore.showAlert(getErrorMessage(error, "历史记录加载失败"), "error");
+      }),
       appStore.autoCheckUpdate().catch(() => {}),
     ]);
     appStore.bridgeReady = true;
@@ -179,16 +438,11 @@ onMounted(async () => {
   }
 });
 
-watch(
-  () => taskStore.run.status,
-  (status) => {
-    if (["running", "paused", "cancelling"].includes(status)) {
-      historyStore.startAutoRefresh();
-      return;
-    }
-    historyStore.stopAutoRefresh();
-    historyStore.load().catch(() => {});
-  },
-  { immediate: true },
-);
+onBeforeUnmount(() => {
+  historyStore.stopAutoRefresh();
+  if (elapsedTimer !== null) {
+    window.clearInterval(elapsedTimer);
+    elapsedTimer = null;
+  }
+});
 </script>

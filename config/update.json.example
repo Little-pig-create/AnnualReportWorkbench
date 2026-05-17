@@ -1,26 +1,26 @@
 {
-  "version": "1.0.2",
-  "url": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
+  "version": "1.0.3",
+  "url": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench-Setup-1.0.3-onedir.exe",
   "notes": [
-    "重构任务阶段状态逻辑，单阶段任务默认保留其他阶段的历史进度显示，只有全流程执行时才清空全部阶段",
-    "修复文本提取进度显示异常，进度条与仪表盘改为按实际执行推进，并提升百分比与速率显示精度",
-    "优化图表与统计逻辑，统一仪表盘和双图表展示体验，补充旧年报文件统计字段并排除 replaced_pdfs 的文本提取统计",
-    "改进多进程文本提取与运行时细节，避免保存失败时创建目录、修复关闭窗口时的任务收尾，并减少可见子窗体干扰"
+    "重构桌面端工作台布局，按钮区升级为可折叠侧边栏，并补充日出 / 深夜模式一体化切换",
+    "新增吸顶任务进度栏，压缩空闲态体积，优化执行中状态、阶段进度和关键指标的一眼可读性",
+    "统一工作区、任务总览、日志、历史记录和关于页的字号、卡片密度与留白节奏，减少多余滚动",
+    "深度优化深夜模式、分页器、侧边栏折叠动画和关于页版本更新区的层级与对齐表现"
   ],
   "force": false,
-  "sha256": "a9dcf838ca6e5448a79fda5e9883f6b58f68276fa8a3148a181bba253098f58f",
-  "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
+  "sha256": "b7983c6a88d42318fea15f3afacc9a9df4def585715923e02c6d2ad708ca5936",
+  "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench-Setup-1.0.3-onedir.exe",
   "primaryChannel": "github",
   "downloads": {
     "installer": {
-      "fileName": "AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
-      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe",
-      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench-Setup-1.0.2-onedir.exe"
+      "fileName": "AnnualReportWorkbench-Setup-1.0.3-onedir.exe",
+      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench-Setup-1.0.3-onedir.exe",
+      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench-Setup-1.0.3-onedir.exe"
     },
     "portable": {
       "fileName": "AnnualReportWorkbench.exe",
-      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench.exe",
-      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.2/AnnualReportWorkbench.exe"
+      "github": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench.exe",
+      "gitee": "https://gitee.com/xiaozhusir/AnnualReportWorkbench/releases/download/1.0.3/AnnualReportWorkbench.exe"
     }
   }
 }

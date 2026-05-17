@@ -35,24 +35,38 @@ function onInput(event: Event) {
 <style scoped>
 .field {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .field span {
-  font-size: 13px;
+  font-size: var(--type-body-small);
   color: var(--muted);
 }
 
 .input-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
+}
+
+input {
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--field-bg);
+  color: var(--field-text);
+}
+
+input::placeholder {
+  color: var(--field-placeholder);
 }
 
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -61,17 +75,18 @@ button {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--brand);
-  color: white;
-  min-height: 48px;
-  min-width: 76px;
-  padding: 0 16px;
+  color: #fff;
+  min-height: 40px;
+  min-width: 66px;
+  padding: 0 12px;
   cursor: pointer;
+  font-size: var(--type-body);
 }
 
 .secondary {
-  background: #dceef0;
-  color: #14515b;
+  background: var(--control-ghost-bg);
+  color: var(--control-ghost-text);
 }
 </style>

@@ -60,8 +60,8 @@ watch(
 
 <style scoped>
 .console {
-  background: #101720;
-  color: #ecf5ff;
+  background: var(--console-bg);
+  color: var(--console-text);
   border-radius: 24px;
   padding: 18px;
   height: 360px;
@@ -86,8 +86,8 @@ watch(
   grid-template-columns: 70px 58px 64px 1fr;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 12px;
+  border-bottom: 1px solid var(--console-line);
+  font-size: var(--type-body-small);
 }
 
 .row:last-child {
@@ -97,7 +97,7 @@ watch(
 .row span,
 .row b,
 .row em {
-  color: #85a5c8;
+  color: var(--console-muted);
   font-style: normal;
 }
 
@@ -115,11 +115,11 @@ watch(
 
 .row p {
   margin: 0;
-  color: #eff5ff;
+  color: var(--console-text);
   word-break: break-word;
 }
 
 .empty {
-  color: #85a5c8;
+  color: var(--console-muted);
 }
 </style>

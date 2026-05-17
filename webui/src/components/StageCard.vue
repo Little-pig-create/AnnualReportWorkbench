@@ -165,8 +165,8 @@ const detailLines = computed(() => {
   gap: 12px;
   padding: 18px;
   border-radius: 22px;
-  border: 1px solid rgba(20, 28, 45, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid var(--stage-card-border);
+  background: var(--stage-card-bg);
   transition:
     box-shadow 0.22s ease,
     border-color 0.22s ease,
@@ -187,14 +187,14 @@ const detailLines = computed(() => {
 
 .stage-card__head p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body);
   margin-bottom: 6px;
 }
 
 .stage-card__head strong {
   font-size: 22px;
   line-height: 1.15;
-  color: #0f172a;
+  color: var(--stage-card-title);
 }
 
 .stage-card__title {
@@ -210,9 +210,9 @@ const detailLines = computed(() => {
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: rgba(34, 197, 94, 0.14);
-  color: #15803d;
-  font-size: 15px;
+  background: var(--stage-card-check-bg);
+  color: var(--stage-card-check-text);
+  font-size: var(--type-strong);
   font-weight: 900;
 }
 
@@ -222,24 +222,24 @@ const detailLines = computed(() => {
   text-align: center;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--stage-card-percent-bg);
   font-weight: 800;
-  color: #1f2937;
-  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.9);
+  color: var(--stage-card-percent-text);
+  box-shadow: inset 0 0 0 1px var(--stage-card-percent-line);
 }
 
 .stage-card__meter {
   height: 12px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(148, 163, 184, 0.16);
+  background: var(--stage-card-meter-bg);
 }
 
 .stage-card__meter i {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+  background: var(--stage-card-pending-fill);
   transition: width 0.55s ease;
 }
 
@@ -252,6 +252,7 @@ const detailLines = computed(() => {
 
 .stage-card__foot small {
   color: var(--muted);
+  font-size: var(--type-body-small);
   flex: 1;
   min-height: 42px;
   overflow: hidden;
@@ -264,8 +265,8 @@ const detailLines = computed(() => {
 .stage-card__foot code {
   padding: 4px 10px;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.06);
-  color: #334155;
+  background: var(--stage-card-code-bg);
+  color: var(--stage-card-code-text);
   font-family: Consolas, "Courier New", monospace;
   white-space: nowrap;
   min-width: 92px;
@@ -279,12 +280,13 @@ const detailLines = computed(() => {
   min-height: 64px;
   overflow: hidden;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--stage-card-detail-bg);
   align-content: start;
 }
 
 .stage-card__details small {
   color: var(--muted);
+  font-size: var(--type-body-small);
   line-height: 1.45;
 }
 
@@ -294,83 +296,83 @@ const detailLines = computed(() => {
 }
 
 .stage-card[data-status="pending"] {
-  border-color: rgba(226, 232, 240, 0.95);
+  border-color: var(--stage-card-percent-line);
 }
 
 .stage-card[data-status="pending"] .stage-card__meter i {
-  background: linear-gradient(90deg, #cbd5e1, #e2e8f0);
+  background: var(--stage-card-pending-fill);
 }
 
 .stage-card[data-status="running"] {
-  border-color: rgba(37, 99, 235, 0.24);
-  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(248, 250, 252, 0.98));
-  box-shadow: 0 18px 34px rgba(37, 99, 235, 0.12);
+  border-color: var(--stage-card-running-border);
+  background: var(--stage-card-running-bg);
+  box-shadow: var(--stage-card-running-shadow);
   transform: translateY(-1px);
   animation: stagePulse 1.8s ease-in-out infinite;
 }
 
 .stage-card[data-status="running"] .stage-card__percent {
-  background: rgba(219, 234, 254, 0.95);
-  color: #1d4ed8;
-  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.95);
+  background: var(--stage-card-running-percent-bg);
+  color: var(--stage-card-running-percent-text);
+  box-shadow: inset 0 0 0 1px var(--stage-card-running-percent-line);
 }
 
 .stage-card[data-status="running"] .stage-card__meter i {
-  background: linear-gradient(90deg, #2563eb, #38bdf8);
+  background: var(--stage-card-running-fill);
 }
 
 .stage-card[data-status="completed"] {
-  border-color: rgba(34, 197, 94, 0.22);
-  background: linear-gradient(180deg, rgba(240, 253, 244, 0.98), rgba(248, 250, 252, 0.98));
-  box-shadow: 0 16px 30px rgba(34, 197, 94, 0.08);
+  border-color: var(--stage-card-completed-border);
+  background: var(--stage-card-completed-bg);
+  box-shadow: var(--stage-card-completed-shadow);
 }
 
 .stage-card[data-status="completed"] .stage-card__head strong {
-  color: #166534;
+  color: var(--stage-card-completed-text);
 }
 
 .stage-card[data-status="completed"] .stage-card__percent {
-  background: rgba(220, 252, 231, 0.96);
-  color: #166534;
-  box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.95);
+  background: var(--stage-card-completed-percent-bg);
+  color: var(--stage-card-completed-percent-text);
+  box-shadow: inset 0 0 0 1px var(--stage-card-completed-percent-line);
 }
 
 .stage-card[data-status="completed"] .stage-card__meter i {
-  background: linear-gradient(90deg, #16a34a, #22c55e);
+  background: var(--stage-card-completed-fill);
 }
 
 .stage-card[data-status="failed"] {
-  border-color: rgba(239, 68, 68, 0.2);
-  background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(248, 250, 252, 0.98));
+  border-color: var(--stage-card-failed-border);
+  background: var(--stage-card-failed-bg);
 }
 
 .stage-card[data-status="failed"] .stage-card__percent {
-  background: rgba(254, 226, 226, 0.96);
-  color: #b91c1c;
-  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.95);
+  background: var(--stage-card-failed-percent-bg);
+  color: var(--stage-card-failed-percent-text);
+  box-shadow: inset 0 0 0 1px var(--stage-card-failed-percent-line);
 }
 
 .stage-card[data-status="failed"] .stage-card__meter i {
-  background: linear-gradient(90deg, #dc2626, #fb7185);
+  background: var(--stage-card-failed-fill);
 }
 
 .stage-card[data-status="cancelled"] {
-  border-color: rgba(245, 158, 11, 0.24);
-  background: linear-gradient(180deg, rgba(255, 247, 237, 0.98), rgba(248, 250, 252, 0.98));
+  border-color: var(--stage-card-cancelled-border);
+  background: var(--stage-card-cancelled-bg);
 }
 
 .stage-card[data-status="cancelled"] .stage-card__head strong {
-  color: #9a3412;
+  color: var(--stage-card-cancelled-text);
 }
 
 .stage-card[data-status="cancelled"] .stage-card__percent {
-  background: rgba(255, 237, 213, 0.96);
-  color: #9a3412;
-  box-shadow: inset 0 0 0 1px rgba(253, 186, 116, 0.95);
+  background: var(--stage-card-cancelled-percent-bg);
+  color: var(--stage-card-cancelled-percent-text);
+  box-shadow: inset 0 0 0 1px var(--stage-card-cancelled-percent-line);
 }
 
 .stage-card[data-status="cancelled"] .stage-card__meter i {
-  background: linear-gradient(90deg, #ea580c, #f59e0b);
+  background: var(--stage-card-cancelled-fill);
 }
 
 @keyframes stagePulse {

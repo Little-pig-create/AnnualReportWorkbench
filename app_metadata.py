@@ -2,8 +2,8 @@ from __future__ import annotations
 
 APP_NAME = "Annual Report Workbench"
 APP_TITLE = "Annual Report Workbench Desktop"
-APP_VERSION = "1.0.2"
-APP_FILE_VERSION = "1.0.2.0"
+APP_VERSION = "1.0.3"
+APP_FILE_VERSION = "1.0.3.0"
 PRODUCT_NAME = "Annual Report Workbench"
 COMPANY_NAME = "Little-pig-create"
 COPYRIGHT = "Copyright (c) 2026 Little-pig-create"

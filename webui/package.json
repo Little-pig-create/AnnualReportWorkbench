@@ -1,7 +1,7 @@
 {
   "name": "report-spider-webui",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@lucide/vue": "^1.16.0",
     "echarts": "^5.6.0",
     "element-plus": "^2.14.0",
     "pinia": "^3.0.3",

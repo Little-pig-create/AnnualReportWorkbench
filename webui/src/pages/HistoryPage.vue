@@ -1,13 +1,13 @@
 <template>
   <section class="history-page">
     <header class="history-head">
-      <div class="history-head__copy">
+      <div class="history-copy">
         <p class="section-kicker">历史任务</p>
         <h2>任务历史中心</h2>
-        <p>查看每次运行的开始时间、结束时间、运行时长、阶段结果、失败原因与输出目录，支持搜索、筛选、导出与一键复跑。</p>
+        <p>集中查看运行状态、阶段结果和输出目录，支持筛选、导出和一键复跑。</p>
       </div>
 
-      <div class="history-head__actions">
+      <div class="history-actions">
         <button class="ghost-button" @click="historyStore.exportJson()" :disabled="historyStore.exporting">
           {{ historyStore.exporting ? "导出中..." : "导出 JSON" }}
         </button>
@@ -22,12 +22,12 @@
         <span>搜索</span>
         <input
           v-model.trim="keyword"
-          placeholder="搜索运行模式、状态、失败原因、输出目录、运行 ID"
+          placeholder="搜索运行模式、状态、错误原因、输出目录或运行 ID"
         />
       </label>
 
       <label class="toolbar-field">
-        <span>状态筛选</span>
+        <span>状态</span>
         <select v-model="statusFilter">
           <option value="ALL">全部状态</option>
           <option value="completed">已完成</option>
@@ -39,7 +39,7 @@
       </label>
 
       <label class="toolbar-field">
-        <span>模式筛选</span>
+        <span>模式</span>
         <select v-model="modeFilter">
           <option value="ALL">全部模式</option>
           <option value="pipeline">完整流程</option>
@@ -50,13 +50,13 @@
       </label>
     </section>
 
-    <section class="surface history-list">
+    <section class="history-board">
       <div class="history-summary">
-        <strong>共 {{ filteredItems.length }} 条</strong>
-        <span v-if="keyword">当前搜索：{{ keyword }}</span>
+        <strong>共 {{ filteredItems.length }} 条任务</strong>
+        <span v-if="keyword">当前关键词：{{ keyword }}</span>
       </div>
 
-      <div v-if="filteredItems.length === 0" class="history-empty">
+      <div v-if="filteredItems.length === 0" class="surface history-empty">
         没有匹配的历史任务
       </div>
 
@@ -85,7 +85,7 @@
               <span class="history-meta__label">运行时长</span>
               <strong class="history-meta__value">{{ formatDuration(item.startedAt, item.finishedAt) }}</strong>
             </div>
-            <div class="history-meta">
+            <div class="history-meta history-meta--wide">
               <span class="history-meta__label">输出目录</span>
               <strong class="history-meta__value history-meta__value--path">{{ item.outputDir || "-" }}</strong>
             </div>
@@ -93,20 +93,14 @@
 
           <p v-if="item.error" class="history-card__error">失败原因：{{ item.error }}</p>
 
-          <div class="history-card__footer">
-            <div class="history-card__actions">
-              <button class="mini-link" @click="openDetail(item)">查看详情</button>
-              <button
-                class="mini-link mini-link--success"
-                @click="rerun(item)"
-                :disabled="taskStore.isBusy"
-              >
-                一键复跑
-              </button>
-              <button class="mini-link" @click="openPath(item.outputDir)" :disabled="!item.outputDir">
-                打开输出目录
-              </button>
-            </div>
+          <div class="history-card__actions">
+            <button class="mini-link" @click="openDetail(item)">查看详情</button>
+            <button class="mini-link mini-link--success" @click="rerun(item)" :disabled="taskStore.isBusy">
+              一键复跑
+            </button>
+            <button class="mini-link" @click="openPath(item.outputDir)" :disabled="!item.outputDir">
+              打开输出目录
+            </button>
           </div>
         </article>
       </div>
@@ -134,9 +128,7 @@
           <div class="dialog-hero__main">
             <p class="section-kicker">任务摘要</p>
             <h3>{{ modeText(selectedItem.mode) }}</h3>
-            <p class="dialog-hero__desc">
-              运行 ID：{{ selectedItem.runId }}
-            </p>
+            <p class="dialog-hero__desc">运行 ID：{{ selectedItem.runId }}</p>
           </div>
           <div class="dialog-hero__status" :data-tone="runStatusTone(selectedItem)">
             {{ runStatusText(selectedItem) }}
@@ -178,12 +170,12 @@
 
         <section class="dialog-block">
           <header class="dialog-block__head">
-            <h4>阶段结果结构图</h4>
+            <h4>阶段结果结构</h4>
           </header>
           <article class="dialog-chart-card">
             <header class="dialog-chart-card__head">
               <strong>单次任务结果构成</strong>
-              <span>用一张堆叠图解释各阶段的结果结构，适合快速复盘。</span>
+              <span>用一张堆叠图快速回看各阶段产出与失败结构。</span>
             </header>
             <BaseChart :option="stageStructureChartOption" />
           </article>
@@ -191,7 +183,7 @@
 
         <section class="dialog-block">
           <header class="dialog-block__head">
-            <h4>阶段摘要卡</h4>
+            <h4>阶段摘要</h4>
           </header>
           <div class="dialog-stage-list">
             <article v-for="stage in selectedItem.stages" :key="stage.name" class="dialog-stage-card">
@@ -209,6 +201,7 @@
                   </span>
                 </div>
               </div>
+
               <div class="dialog-stage-card__bar">
                 <div
                   class="dialog-stage-card__bar-fill"
@@ -216,10 +209,12 @@
                   :style="{ width: `${stagePercent(stage)}%` }"
                 />
               </div>
+
               <div class="dialog-stage-card__meta">
-                <span>进度百分比：{{ stagePercentText(stage) }}</span>
+                <span>完成度：{{ stagePercentText(stage) }}</span>
                 <span>阶段状态：{{ statusText(stage.status) }}</span>
               </div>
+
               <div v-if="stageMetrics(stage).length" class="dialog-stage-card__stats">
                 <article
                   v-for="metric in stageMetrics(stage)"
@@ -230,10 +225,13 @@
                   <strong>{{ metric.value }}</strong>
                 </article>
               </div>
+
               <p class="dialog-stage-card__hint">{{ stage.hint || "暂无阶段提示" }}</p>
+
               <button class="mini-link dialog-stage-card__detail" @click="toggleStage(stage.name)">
                 {{ expandedStages.includes(stage.name) ? "收起原始结果" : "查看原始结果" }}
               </button>
+
               <pre v-if="expandedStages.includes(stage.name)">{{ formatJson(stage.result) }}</pre>
             </article>
           </div>
@@ -241,7 +239,7 @@
 
         <section class="dialog-block">
           <header class="dialog-block__head">
-            <h4>原始 JSON / 原始结果</h4>
+            <h4>原始 JSON</h4>
           </header>
           <div class="dialog-raw-actions">
             <button class="mini-link" @click="rawVisible = !rawVisible">
@@ -390,7 +388,7 @@ function stageMetrics(stage: StageState) {
       { label: "已存在", value: exists },
       { label: "失败数量", value: failed },
       { label: "跳过数量", value: skipped },
-      oldAnnualReportTotal > 0 ? { label: "Old annual reports", value: oldAnnualReportTotal } : null,
+      oldAnnualReportTotal > 0 ? { label: "旧年报数量", value: oldAnnualReportTotal } : null,
     ].filter(Boolean) as Array<{ label: string; value: string | number }>;
   }
 
@@ -411,19 +409,41 @@ function stageMetrics(stage: StageState) {
 }
 
 const stageStructureChartOption = computed(() => {
-  const palette = {
-    linksMain: "#2A9D8F",
-    linksSoft: "#7FD1C7",
-    pdfMain: "#4C6FFF",
-    pdfSoft: "#A9B8FF",
-    pdfWarn: "#F4A261",
-    extractMain: "#7B61FF",
-    extractSoft: "#C5B8FF",
-    danger: "#E76F51",
-    axis: "#64748b",
-    grid: "rgba(148, 163, 184, 0.18)",
-    text: "#334155",
-  };
+  const palette = appStore.themeMode === "midnight"
+    ? {
+        linksMain: "#2dd4bf",
+        linksSoft: "#67e8f9",
+        pdfMain: "#60a5fa",
+        pdfSoft: "#93c5fd",
+        pdfWarn: "#fdba74",
+        extractMain: "#a78bfa",
+        extractSoft: "#c4b5fd",
+        danger: "#fb7185",
+        axis: "#8ca3bd",
+        grid: "rgba(148, 163, 184, 0.14)",
+        text: "#dbeafe",
+        tooltipBg: "rgba(8, 13, 23, 0.96)",
+        tooltipBorder: "rgba(96, 165, 250, 0.18)",
+        tooltipShadow: "0 18px 42px rgba(2, 6, 23, 0.52)",
+        axisLine: "rgba(148, 163, 184, 0.28)",
+      }
+    : {
+        linksMain: "#2A9D8F",
+        linksSoft: "#7FD1C7",
+        pdfMain: "#4C6FFF",
+        pdfSoft: "#A9B8FF",
+        pdfWarn: "#F4A261",
+        extractMain: "#7B61FF",
+        extractSoft: "#C5B8FF",
+        danger: "#E76F51",
+        axis: "#64748b",
+        grid: "rgba(148, 163, 184, 0.18)",
+        text: "#334155",
+        tooltipBg: "rgba(255,255,255,0.96)",
+        tooltipBorder: "rgba(148,163,184,0.2)",
+        tooltipShadow: "0 16px 40px rgba(15, 23, 42, 0.14)",
+        axisLine: "rgba(148, 163, 184, 0.35)",
+      };
 
   const stages = selectedItem.value?.stages || [];
   const categories = stages.map((stage) => stage.title);
@@ -474,11 +494,11 @@ const stageStructureChartOption = computed(() => {
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "rgba(255,255,255,0.96)",
-      borderColor: "rgba(148,163,184,0.2)",
+      backgroundColor: palette.tooltipBg,
+      borderColor: palette.tooltipBorder,
       borderWidth: 1,
       textStyle: { color: palette.text },
-      extraCssText: "box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); border-radius: 14px;",
+      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
     },
     legend: {
       bottom: 0,
@@ -509,7 +529,7 @@ const stageStructureChartOption = computed(() => {
       },
       axisLine: {
         lineStyle: {
-          color: "rgba(148, 163, 184, 0.35)",
+          color: palette.axisLine,
         },
       },
     },
@@ -718,38 +738,38 @@ watch(
 <style scoped>
 .history-page {
   display: grid;
-  gap: 24px;
+  gap: 14px;
 }
 
 .history-head {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
 }
 
-.history-head__copy {
+.history-copy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .history-head h2 {
-  margin: 6px 0 0;
-  font-size: 40px;
+  margin: 0;
+  font-size: var(--type-page-title);
+  line-height: 1.12;
 }
 
 .history-head p:last-child {
   margin: 0;
   color: var(--muted);
-  line-height: 1.7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.5;
+  max-width: 760px;
+  font-size: var(--type-body);
 }
 
-.history-head__actions {
+.history-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
@@ -757,9 +777,11 @@ watch(
 .ghost-button {
   border: 0;
   border-radius: 999px;
-  padding: 14px 20px;
+  min-height: 40px;
+  padding: 0 16px;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .refresh-button {
@@ -768,181 +790,195 @@ watch(
 }
 
 .ghost-button {
-  background: #eef6f3;
-  color: #0f766e;
+  background: var(--control-ghost-bg);
+  color: var(--control-ghost-text);
 }
 
 .history-toolbar {
   display: grid;
-  grid-template-columns: 1.2fr 0.4fr 0.4fr;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(160px, 0.35fr) minmax(160px, 0.35fr);
+  gap: 12px;
   align-items: center;
 }
 
 .toolbar-field {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .toolbar-field span {
-  font-size: 13px;
+  font-size: var(--type-body-small);
   color: var(--muted);
 }
 
 .toolbar-field input,
 .toolbar-field select {
   width: 100%;
-  border: 1px solid rgba(29, 78, 216, 0.12);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: #eef2ff;
-  color: #1d4ed8;
+  min-height: 40px;
+  border: 1px solid var(--control-tint-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: var(--control-tint-bg);
+  color: var(--control-tint-text);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
 }
 
 .toolbar-field input::placeholder {
-  color: rgba(29, 78, 216, 0.65);
+  color: var(--control-tint-placeholder);
 }
 
 .toolbar-field select {
   background-image:
-    linear-gradient(45deg, transparent 50%, #1d4ed8 50%),
-    linear-gradient(135deg, #1d4ed8 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--control-tint-text) 50%),
+    linear-gradient(135deg, var(--control-tint-text) 50%, transparent 50%);
   background-position:
-    calc(100% - 22px) calc(50% - 3px),
-    calc(100% - 14px) calc(50% - 3px);
-  background-size: 8px 8px, 8px 8px;
+    calc(100% - 20px) calc(50% - 3px),
+    calc(100% - 13px) calc(50% - 3px);
+  background-size: 7px 7px, 7px 7px;
   background-repeat: no-repeat;
-  padding-right: 40px;
+  padding-right: 36px;
 }
 
 .toolbar-field select option {
-  color: #1d4ed8;
-  background: #eef2ff;
+  color: var(--field-text);
+  background: var(--field-bg);
 }
 
-.history-list {
+.history-board {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .history-summary {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   color: var(--muted);
+  font-size: var(--type-body);
 }
 
 .history-empty {
-  color: var(--muted);
   min-height: 120px;
   display: grid;
   place-items: center;
+  color: var(--muted);
 }
 
 .history-cards {
   display: grid;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .history-card {
   display: grid;
-  gap: 16px;
-  padding: 22px;
-  border-radius: 24px;
-  background: var(--panel-alt);
-  border: 1px solid rgba(17, 24, 39, 0.06);
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
 }
 
 .history-card__top {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: flex-start;
 }
 
 .history-card__title-wrap {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
 .history-card__title {
   margin: 0;
-  font-size: 22px;
-  line-height: 1.3;
-  color: #1f2937;
+  font-size: var(--type-section-title);
+  line-height: 1.25;
 }
 
 .history-card__subtitle {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-small);
   word-break: break-all;
 }
 
-.history-card__status {
+.history-card__status,
+.dialog-hero__status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  padding: 0 16px;
+  min-height: 32px;
+  padding: 0 12px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-.history-card__status[data-tone="success"] {
-  background: #dcfce7;
-  color: #166534;
+.history-card__status[data-tone="success"],
+.dialog-hero__status[data-tone="success"] {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
 }
 
-.history-card__status[data-tone="running"] {
-  background: #dbeafe;
-  color: #1d4ed8;
+.history-card__status[data-tone="running"],
+.dialog-hero__status[data-tone="running"] {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
 }
 
-.history-card__status[data-tone="warning"] {
-  background: #fff7ed;
-  color: #c2410c;
+.history-card__status[data-tone="warning"],
+.dialog-hero__status[data-tone="warning"] {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
 }
 
-.history-card__status[data-tone="danger"] {
-  background: #fee2e2;
-  color: #b91c1c;
+.history-card__status[data-tone="danger"],
+.dialog-hero__status[data-tone="danger"] {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
 }
 
-.history-card__status[data-tone="muted"] {
-  background: #e5e7eb;
-  color: #4b5563;
+.history-card__status[data-tone="muted"],
+.dialog-hero__status[data-tone="muted"] {
+  background: var(--status-muted-bg);
+  color: var(--status-muted-text);
 }
 
 .history-card__grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .history-meta {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.6);
+  gap: 5px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: var(--surface-muted);
+}
+
+.history-meta--wide {
+  grid-column: 1 / -1;
 }
 
 .history-meta__label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-caption);
 }
 
 .history-meta__value {
-  color: #1f2937;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: var(--type-body);
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 .history-meta__value--path {
@@ -951,82 +987,123 @@ watch(
 
 .history-card__error {
   margin: 0;
-  color: #dc2626;
-  font-size: 13px;
-  line-height: 1.7;
+  color: var(--danger);
+  font-size: var(--type-body-small);
+  line-height: 1.55;
   word-break: break-all;
-}
-
-.history-card__footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 18px;
-  align-items: center;
 }
 
 .history-card__actions {
   display: flex;
   gap: 8px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.history-card__actions::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  flex-wrap: wrap;
 }
 
 .history-pagination {
   display: flex;
   justify-content: flex-end;
-  margin-top: 8px;
+}
+
+.history-pagination :deep(.el-pagination) {
+  --el-pagination-button-bg-color: var(--pagination-bg);
+  --el-pagination-hover-color: var(--pagination-hover-text);
+  --el-pagination-text-color: var(--pagination-text);
+  --el-pagination-font-size: 12px;
+  gap: 6px;
+  color: var(--pagination-text);
+}
+
+.history-pagination :deep(.el-pagination .btn-prev),
+.history-pagination :deep(.el-pagination .btn-next),
+.history-pagination :deep(.el-pagination .el-pager li) {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid var(--pagination-border);
+  background: var(--pagination-bg);
+  color: var(--pagination-text);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.history-pagination :deep(.el-pagination .btn-prev:hover),
+.history-pagination :deep(.el-pagination .btn-next:hover),
+.history-pagination :deep(.el-pagination .el-pager li:hover) {
+  background: var(--pagination-hover-bg);
+  color: var(--pagination-hover-text);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.history-pagination :deep(.el-pagination .el-pager li.is-active) {
+  border-color: transparent;
+  background: var(--pagination-active-bg);
+  color: var(--pagination-active-text);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+}
+
+.history-pagination :deep(.el-pagination .btn-prev:disabled),
+.history-pagination :deep(.el-pagination .btn-next:disabled) {
+  background: var(--pagination-disabled-bg);
+  color: var(--pagination-disabled-text);
+  border-color: var(--pagination-border);
+  transform: none;
+}
+
+.history-pagination :deep(.el-pagination__total),
+.history-pagination :deep(.el-pagination__jump) {
+  color: var(--pagination-text);
+}
+
+.history-pagination :deep(.el-pagination__jump .el-input__wrapper) {
+  min-height: 34px;
+  border-radius: 12px;
+  background: var(--pagination-input-bg);
+  box-shadow: inset 0 0 0 1px var(--pagination-border);
+}
+
+.history-pagination :deep(.el-pagination__jump .el-input__inner) {
+  color: var(--pagination-input-text);
 }
 
 .mini-link {
   border: 0;
-  background: #eef2ff;
-  color: #1d4ed8;
+  background: var(--control-tint-bg);
+  color: var(--control-tint-text);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 9px 13px;
   cursor: pointer;
-  flex: 0 0 auto;
   white-space: nowrap;
 }
 
 .mini-link--success {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
 }
 
 .dialog-layout {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .dialog-hero {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   align-items: flex-start;
-  padding: 20px 22px;
-  border-radius: 22px;
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(29, 78, 216, 0.06));
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--accent-panel-soft);
 }
 
 .dialog-hero__main {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .dialog-hero__main h3 {
   margin: 0;
-  font-size: 28px;
+  font-size: var(--type-page-title);
 }
 
 .dialog-hero__desc {
@@ -1035,85 +1112,48 @@ watch(
   word-break: break-all;
 }
 
-.dialog-hero__status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.dialog-hero__status[data-tone="success"] {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.dialog-hero__status[data-tone="running"] {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.dialog-hero__status[data-tone="warning"] {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.dialog-hero__status[data-tone="danger"] {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-.dialog-hero__status[data-tone="muted"] {
-  background: #e5e7eb;
-  color: #4b5563;
-}
-
 .dialog-alert {
   display: grid;
   gap: 8px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--status-danger-bg);
+  border: 1px solid rgba(239, 68, 68, 0.26);
 }
 
 .dialog-alert strong {
-  color: #b91c1c;
+  color: var(--status-danger-text);
 }
 
 .dialog-alert p {
   margin: 0;
-  color: #991b1b;
-  line-height: 1.7;
+  color: var(--status-danger-text);
+  line-height: 1.55;
   word-break: break-all;
 }
 
 .dialog-block {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .dialog-block__head h4 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--type-section-title);
 }
 
 .dialog-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .dialog-summary-card {
   display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: var(--panel-alt);
+  gap: 6px;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: var(--surface-muted);
 }
 
 .dialog-summary-card small {
@@ -1121,8 +1161,7 @@ watch(
 }
 
 .dialog-summary-card strong {
-  color: #1f2937;
-  line-height: 1.6;
+  line-height: 1.5;
   word-break: break-all;
 }
 
@@ -1132,43 +1171,42 @@ watch(
 
 .dialog-chart-card {
   display: grid;
-  gap: 12px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: var(--panel-alt);
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface-muted);
 }
 
 .dialog-chart-card__head {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .dialog-chart-card__head strong {
-  color: #1f2937;
-  font-size: 16px;
+  font-size: var(--type-strong);
 }
 
 .dialog-chart-card__head span {
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--type-body-small);
+  line-height: 1.45;
 }
 
 .dialog-chart-card :deep(.chart) {
-  min-height: 320px;
+  min-height: 280px;
 }
 
 .dialog-stage-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .dialog-stage-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 18px;
-  background: var(--panel-alt);
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface-muted);
 }
 
 .dialog-stage-card__head {
@@ -1180,7 +1218,7 @@ watch(
 
 .dialog-stage-card__title {
   display: grid;
-  gap: 6px;
+  gap: 5px;
 }
 
 .dialog-stage-card__metrics {
@@ -1190,62 +1228,61 @@ watch(
 }
 
 .dialog-stage-card__status {
-  font-size: 13px;
+  font-size: var(--type-body-small);
   font-weight: 600;
 }
 
 .dialog-stage-card__status[data-status="completed"] {
-  color: #166534;
+  color: var(--status-success-text);
 }
 
 .dialog-stage-card__status[data-status="running"] {
-  color: #1d4ed8;
+  color: var(--status-info-text);
 }
 
 .dialog-stage-card__status[data-status="failed"],
 .dialog-stage-card__status[data-status="cancelled"] {
-  color: #b91c1c;
+  color: var(--status-danger-text);
 }
 
 .dialog-stage-card__progress {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--type-body-small);
   white-space: nowrap;
 }
 
 .dialog-stage-card__percent {
-  color: #1f2937;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
 }
 
 .dialog-stage-card__bar {
   position: relative;
   width: 100%;
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.16);
+  background: var(--stage-card-meter-bg);
   overflow: hidden;
 }
 
 .dialog-stage-card__bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: #94a3b8;
+  background: var(--stage-card-pending-fill);
   transition: width 0.24s ease;
 }
 
 .dialog-stage-card__bar-fill[data-status="completed"] {
-  background: linear-gradient(90deg, #34d399, #0f766e);
+  background: var(--stage-card-completed-fill);
 }
 
 .dialog-stage-card__bar-fill[data-status="running"] {
-  background: linear-gradient(90deg, #60a5fa, #1d4ed8);
+  background: var(--stage-card-running-fill);
 }
 
 .dialog-stage-card__bar-fill[data-status="failed"],
 .dialog-stage-card__bar-fill[data-status="cancelled"] {
-  background: linear-gradient(90deg, #f87171, #dc2626);
+  background: var(--stage-card-failed-fill);
 }
 
 .dialog-stage-card__meta {
@@ -1253,41 +1290,41 @@ watch(
   justify-content: space-between;
   gap: 12px;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--type-body-small);
+  line-height: 1.45;
   flex-wrap: wrap;
 }
 
 .dialog-stage-card__stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .dialog-stage-card__stat {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.58);
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: var(--field-bg-soft);
 }
 
 .dialog-stage-card__stat small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--type-caption);
 }
 
 .dialog-stage-card__stat strong {
-  color: #1f2937;
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: var(--type-strong);
+  line-height: 1.35;
   word-break: break-all;
 }
 
 .dialog-stage-card__hint {
   margin: 0;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.5;
+  font-size: var(--type-body-small);
 }
 
 .dialog-stage-card__detail {
@@ -1296,28 +1333,20 @@ watch(
 
 .dialog-raw-actions {
   display: flex;
-  justify-content: flex-start;
 }
 
 pre {
   margin: 0;
-  padding: 14px;
+  padding: 12px;
   border-radius: 14px;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--code-bg);
+  color: var(--code-text);
   overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: Consolas, "Courier New", monospace;
   font-size: 12px;
-  line-height: 1.6;
-}
-
-pre::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  line-height: 1.55;
 }
 
 @media (max-width: 1180px) {
@@ -1328,13 +1357,15 @@ pre::-webkit-scrollbar {
   }
 
   .history-toolbar,
+  .history-cards,
   .history-card__grid,
   .dialog-summary-grid,
   .dialog-stage-card__stats {
     grid-template-columns: 1fr;
   }
 
-  .dialog-summary-card--wide {
+  .dialog-summary-card--wide,
+  .history-meta--wide {
     grid-column: span 1;
   }
 }
