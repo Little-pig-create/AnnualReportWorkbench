@@ -1,7 +1,7 @@
 <template>
   <section class="editor-page" v-if="settings">
-    <header class="editor-head">
-      <div>
+    <header class="editor-head surface">
+      <div class="editor-copy">
         <p class="section-kicker">工作区</p>
         <h2>路径与年份范围</h2>
         <p>集中配置项目路径、输出目录和抓取年份范围，适合在批量运行前做一次快速检查。</p>
@@ -11,7 +11,7 @@
       </button>
     </header>
 
-    <div class="editor-layout">
+    <div class="config-grid">
       <section class="surface editor-card core-card">
         <header class="section-header">
           <div>
@@ -273,12 +273,7 @@ function testSound() {
 </script>
 
 <style scoped>
-.editor-page { display: grid; gap: 14px; }
-.editor-head { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
-.editor-head h2 { margin: 2px 0 6px; font-size: var(--type-page-title); line-height: 1.12; }
-.editor-head p:last-child { margin: 0; color: var(--muted); max-width: 760px; line-height: 1.55; font-size: var(--type-body); }
-.save-button { border: 0; border-radius: 999px; min-height: 42px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f766e, #155e75); color: #fff; font-weight: 700; cursor: pointer; }
-.editor-layout { display: grid; grid-template-columns: 1.18fr 0.82fr; gap: 16px; align-items: start; }
+.editor-page { --config-grid-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr); }
 .editor-card { display: grid; gap: 12px; }
 .form-grid { display: grid; gap: 12px; margin-top: -8px; }
 .core-card { gap: 6px; align-content: start; }
@@ -286,36 +281,52 @@ function testSound() {
 .core-card .form-grid { margin-top: 0; }
 .side-panel { display: grid; gap: 14px; align-content: start; padding: 16px 18px; }
 .side-panel__header { margin-bottom: -2px; }
+.range-card {
+  padding: 16px 18px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, var(--surface-strong), var(--surface-muted));
+  box-shadow: inset 0 0 0 1px var(--surface-outline);
+}
 .range-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.field { display: grid; gap: 8px; }
-.field span { font-size: var(--type-body-small); color: var(--muted); }
-.field input { width: 100%; min-height: 40px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--field-bg); color: var(--field-text); }
-.field input::placeholder { color: var(--field-placeholder); }
 .range-band { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 16px; }
-.range-band__line { position: absolute; top: 0; left: 0; right: 0; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #1d4ed8, #0f766e); }
-.range-band__marker { padding: 12px 14px; border-radius: 16px; background: var(--panel-alt); }
-.range-band__marker strong { display: block; font-size: 22px; margin-bottom: 2px; }
+.range-band__line { position: absolute; top: 0; left: 0; right: 0; height: var(--track-height-sm); border-radius: var(--radius-pill); background: linear-gradient(90deg, #1d4ed8, #0f766e); }
+.range-band__marker {
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--field-bg-soft);
+}
+.range-band__marker strong { display: block; font-size: var(--type-metric-md); margin-bottom: 2px; }
 .range-band__marker span { color: var(--muted); letter-spacing: 0.16em; font-size: var(--type-caption); }
-.notify-card { align-content: start; gap: 10px; }
+.notify-card {
+  align-content: start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
+}
 .notify-stack { display: grid; gap: 10px; }
-.notify-item { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 16px; background: var(--panel-alt); }
+.notify-item { display: grid; grid-template-columns: 18px 1fr; gap: 10px; align-items: start; padding: 12px 14px; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--field-bg-soft); }
 .notify-item input { margin-top: 3px; }
 .notify-item strong { display: block; margin-bottom: 3px; font-size: var(--type-strong); }
 .notify-item p { margin: 0; color: var(--muted); font-size: var(--type-body-small); line-height: 1.5; }
 .notify-foot { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
 .notify-status { margin: 0; color: var(--muted); font-size: var(--type-body-small); }
 .notify-actions { display: flex; }
-.ghost-button { border: 0; border-radius: 999px; min-height: 38px; padding: 0 14px; background: var(--control-ghost-bg); color: var(--control-ghost-text); font-weight: 700; cursor: pointer; }
+
+.side-panel :deep(.section-header h3) {
+  font-size: var(--type-section-title);
+}
+
+.side-panel .range-card + .notify-card {
+  margin-top: 2px;
+}
 
 @media (max-width: 1180px) {
-  .editor-layout,
   .range-grid {
     grid-template-columns: 1fr;
-  }
-
-  .editor-head {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .notify-foot {

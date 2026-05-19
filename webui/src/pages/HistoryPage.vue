@@ -1,7 +1,7 @@
 <template>
-  <section class="history-page">
-    <header class="history-head">
-      <div class="history-copy">
+  <section class="history-page editor-page">
+    <header class="history-head editor-head surface">
+      <div class="history-copy editor-copy">
         <p class="section-kicker">历史任务</p>
         <h2>任务历史中心</h2>
         <p>集中查看运行状态、阶段结果和输出目录，支持筛选、导出和一键复跑。</p>
@@ -11,7 +11,7 @@
         <button class="ghost-button" @click="historyStore.exportJson()" :disabled="historyStore.exporting">
           {{ historyStore.exporting ? "导出中..." : "导出 JSON" }}
         </button>
-        <button class="refresh-button" @click="refreshHistory" :disabled="historyStore.loading">
+        <button class="save-button refresh-button" @click="refreshHistory" :disabled="historyStore.loading">
           {{ historyStore.loading ? "刷新中..." : "刷新历史" }}
         </button>
       </div>
@@ -21,6 +21,7 @@
       <label class="toolbar-field toolbar-field--search">
         <span>搜索</span>
         <input
+          class="control-input"
           v-model.trim="keyword"
           placeholder="搜索运行模式、状态、错误原因、输出目录或运行 ID"
         />
@@ -28,25 +29,25 @@
 
       <label class="toolbar-field">
         <span>状态</span>
-        <select v-model="statusFilter">
-          <option value="ALL">全部状态</option>
-          <option value="completed">已完成</option>
-          <option value="failed">失败</option>
-          <option value="cancelled">已终止</option>
-          <option value="running">运行中</option>
-          <option value="paused">已暂停</option>
-        </select>
+        <ElSelect v-model="statusFilter" class="control-select--el" popper-class="app-select-popper">
+          <ElOption value="ALL" label="全部状态" />
+          <ElOption value="completed" label="已完成" />
+          <ElOption value="failed" label="失败" />
+          <ElOption value="cancelled" label="已终止" />
+          <ElOption value="running" label="运行中" />
+          <ElOption value="paused" label="已暂停" />
+        </ElSelect>
       </label>
 
       <label class="toolbar-field">
         <span>模式</span>
-        <select v-model="modeFilter">
-          <option value="ALL">全部模式</option>
-          <option value="pipeline">完整流程</option>
-          <option value="links">仅抓链接</option>
-          <option value="pdf">仅下载 PDF</option>
-          <option value="extract">仅提取文本</option>
-        </select>
+        <ElSelect v-model="modeFilter" class="control-select--el" popper-class="app-select-popper">
+          <ElOption value="ALL" label="全部模式" />
+          <ElOption value="pipeline" label="完整流程" />
+          <ElOption value="links" label="仅抓链接" />
+          <ElOption value="pdf" label="仅下载 PDF" />
+          <ElOption value="extract" label="仅提取文本" />
+        </ElSelect>
       </label>
     </section>
 
@@ -257,6 +258,7 @@
 import { computed, ref, watch } from "vue";
 import { ElDialog } from "element-plus/es/components/dialog/index";
 import { ElPagination } from "element-plus/es/components/pagination/index";
+import { ElOption, ElSelect } from "element-plus/es/components/select/index";
 import BaseChart from "@/components/BaseChart.vue";
 import { bridge } from "@/services/bridge";
 import { formatDateTime, formatDuration } from "@/services/datetime";
@@ -498,7 +500,7 @@ const stageStructureChartOption = computed(() => {
       borderColor: palette.tooltipBorder,
       borderWidth: 1,
       textStyle: { color: palette.text },
-      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: 14px;`,
+      extraCssText: `box-shadow: ${palette.tooltipShadow}; border-radius: var(--radius-md);`,
     },
     legend: {
       bottom: 0,
@@ -741,57 +743,10 @@ watch(
   gap: 14px;
 }
 
-.history-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-}
-
-.history-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.history-head h2 {
-  margin: 0;
-  font-size: var(--type-page-title);
-  line-height: 1.12;
-}
-
-.history-head p:last-child {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.5;
-  max-width: 760px;
-  font-size: var(--type-body);
-}
-
 .history-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-}
-
-.refresh-button,
-.ghost-button {
-  border: 0;
-  border-radius: 999px;
-  min-height: 40px;
-  padding: 0 16px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.refresh-button {
-  background: linear-gradient(135deg, #0f766e, #155e75);
-  color: #fff;
-}
-
-.ghost-button {
-  background: var(--control-ghost-bg);
-  color: var(--control-ghost-text);
 }
 
 .history-toolbar {
@@ -806,44 +761,18 @@ watch(
   gap: 7px;
 }
 
+.toolbar-field :deep(.control-input),
+.toolbar-field :deep(.control-select--el) {
+  min-height: var(--control-height-sm);
+}
+
+.toolbar-field--search :deep(.control-input) {
+  font-size: var(--type-body);
+}
+
 .toolbar-field span {
   font-size: var(--type-body-small);
   color: var(--muted);
-}
-
-.toolbar-field input,
-.toolbar-field select {
-  width: 100%;
-  min-height: 40px;
-  border: 1px solid var(--control-tint-border);
-  border-radius: 14px;
-  padding: 10px 12px;
-  background: var(--control-tint-bg);
-  color: var(--control-tint-text);
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-}
-
-.toolbar-field input::placeholder {
-  color: var(--control-tint-placeholder);
-}
-
-.toolbar-field select {
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--control-tint-text) 50%),
-    linear-gradient(135deg, var(--control-tint-text) 50%, transparent 50%);
-  background-position:
-    calc(100% - 20px) calc(50% - 3px),
-    calc(100% - 13px) calc(50% - 3px);
-  background-size: 7px 7px, 7px 7px;
-  background-repeat: no-repeat;
-  padding-right: 36px;
-}
-
-.toolbar-field select option {
-  color: var(--field-text);
-  background: var(--field-bg);
 }
 
 .history-board {
@@ -860,7 +789,7 @@ watch(
 }
 
 .history-empty {
-  min-height: 120px;
+  min-height: var(--card-min-height-lg);
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -876,7 +805,7 @@ watch(
   display: grid;
   gap: 12px;
   padding: 16px;
-  border-radius: 22px;
+  border-radius: var(--radius-3xl);
   background: var(--surface);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-soft);
@@ -914,10 +843,10 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: var(--control-height-xs);
   padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-pill);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -962,7 +891,7 @@ watch(
   display: grid;
   gap: 5px;
   padding: 12px 13px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-muted);
 }
 
@@ -1008,7 +937,7 @@ watch(
   --el-pagination-button-bg-color: var(--pagination-bg);
   --el-pagination-hover-color: var(--pagination-hover-text);
   --el-pagination-text-color: var(--pagination-text);
-  --el-pagination-font-size: 12px;
+  --el-pagination-font-size: var(--type-pill);
   gap: 6px;
   color: var(--pagination-text);
 }
@@ -1017,8 +946,8 @@ watch(
 .history-pagination :deep(.el-pagination .btn-next),
 .history-pagination :deep(.el-pagination .el-pager li) {
   min-width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
   border: 1px solid var(--pagination-border);
   background: var(--pagination-bg);
   color: var(--pagination-text);
@@ -1056,8 +985,8 @@ watch(
 }
 
 .history-pagination :deep(.el-pagination__jump .el-input__wrapper) {
-  min-height: 34px;
-  border-radius: 12px;
+  min-height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
   background: var(--pagination-input-bg);
   box-shadow: inset 0 0 0 1px var(--pagination-border);
 }
@@ -1070,7 +999,7 @@ watch(
   border: 0;
   background: var(--control-tint-bg);
   color: var(--control-tint-text);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 9px 13px;
   cursor: pointer;
   white-space: nowrap;
@@ -1092,7 +1021,7 @@ watch(
   gap: 14px;
   align-items: flex-start;
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   background: var(--accent-panel-soft);
 }
 
@@ -1116,7 +1045,7 @@ watch(
   display: grid;
   gap: 8px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--status-danger-bg);
   border: 1px solid rgba(239, 68, 68, 0.26);
 }
@@ -1152,7 +1081,7 @@ watch(
   display: grid;
   gap: 6px;
   padding: 13px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-muted);
 }
 
@@ -1173,7 +1102,7 @@ watch(
   display: grid;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-muted);
 }
 
@@ -1193,7 +1122,7 @@ watch(
 }
 
 .dialog-chart-card :deep(.chart) {
-  min-height: 280px;
+  min-height: var(--card-min-height-2xl);
 }
 
 .dialog-stage-list {
@@ -1205,7 +1134,7 @@ watch(
   display: grid;
   gap: 10px;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: var(--surface-muted);
 }
 
@@ -1252,22 +1181,22 @@ watch(
 }
 
 .dialog-stage-card__percent {
-  font-size: 18px;
+  font-size: var(--type-metric);
   line-height: 1;
 }
 
 .dialog-stage-card__bar {
   position: relative;
   width: 100%;
-  height: 8px;
-  border-radius: 999px;
+  height: var(--track-height-xs);
+  border-radius: var(--radius-pill);
   background: var(--stage-card-meter-bg);
   overflow: hidden;
 }
 
 .dialog-stage-card__bar-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--stage-card-pending-fill);
   transition: width 0.24s ease;
 }
@@ -1305,7 +1234,7 @@ watch(
   display: grid;
   gap: 5px;
   padding: 10px 12px;
-  border-radius: 13px;
+  border-radius: var(--radius-sm);
   background: var(--field-bg-soft);
 }
 
@@ -1338,19 +1267,33 @@ watch(
 pre {
   margin: 0;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--code-bg);
   color: var(--code-text);
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: Consolas, "Courier New", monospace;
-  font-size: 12px;
+  font-size: var(--type-code-small);
   line-height: 1.55;
 }
 
+@media (max-width: 1320px) {
+  .history-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar-field--search {
+    grid-column: 1 / -1;
+  }
+
+  .dialog-summary-grid,
+  .dialog-stage-card__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1180px) {
-  .history-head,
   .dialog-hero {
     flex-direction: column;
     align-items: flex-start;

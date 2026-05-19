@@ -1,6 +1,6 @@
 <template>
   <section class="editor-page" v-if="settings">
-    <header class="editor-head">
+    <header class="editor-head surface">
       <div class="editor-copy">
         <p class="section-kicker">PDF 阶段</p>
         <h2>下载并发设置</h2>
@@ -79,77 +79,23 @@ const settings = computed(() => settingsStore.data);
 
 <style scoped>
 .editor-page {
-  display: grid;
-  gap: 14px;
-}
-
-.editor-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-}
-
-.editor-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.editor-head h2 {
-  margin: 0;
-  font-size: var(--type-page-title);
-  line-height: 1.12;
-}
-
-.editor-head p:last-child {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.5;
-  max-width: 720px;
-  font-size: var(--type-body);
-}
-
-.save-button {
-  border: 0;
-  border-radius: 999px;
-  min-height: 40px;
-  padding: 0 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #0f766e, #155e75);
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.config-grid {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
-  gap: 14px;
-}
-
-.config-card {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
-.section-header--tight {
-  margin-bottom: -2px;
+  --config-grid-columns: minmax(300px, 0.72fr) minmax(0, 1.28fr);
+  --config-side-card-min-height: clamp(300px, 33vh, 340px);
 }
 
 .hero-metric {
   display: grid;
-  gap: 2px;
-  padding: 14px 16px;
-  border-radius: 18px;
+  gap: 4px;
+  align-content: start;
+  padding: 16px 18px;
+  border-radius: var(--radius-2xl);
   background: var(--accent-panel-soft);
+  border: 1px solid var(--line-strong);
+  box-shadow: inset 0 0 0 1px var(--surface-outline);
 }
 
 .hero-metric strong {
-  font-size: 30px;
+  font-size: var(--type-metric-large);
   line-height: 1;
 }
 
@@ -157,25 +103,6 @@ const settings = computed(() => settingsStore.data);
 .field span {
   color: var(--muted);
   font-size: var(--type-body-small);
-}
-
-.field {
-  display: grid;
-  gap: 8px;
-}
-
-.field input {
-  width: 100%;
-  min-height: 40px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--field-bg);
-  color: var(--field-text);
-}
-
-.field input::placeholder {
-  color: var(--field-placeholder);
 }
 
 .mini-tips {
@@ -189,8 +116,9 @@ const settings = computed(() => settingsStore.data);
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
-  background: var(--panel-alt);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--field-bg-soft);
 }
 
 .mini-tip small {
@@ -210,6 +138,10 @@ const settings = computed(() => settingsStore.data);
   gap: 10px;
 }
 
+.note-card {
+  gap: 8px;
+}
+
 .note-card p {
   margin: 0;
   color: var(--muted);
@@ -218,12 +150,6 @@ const settings = computed(() => settingsStore.data);
 }
 
 @media (max-width: 1180px) {
-  .editor-head {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .config-grid,
   .mini-tips {
     grid-template-columns: 1fr;
   }

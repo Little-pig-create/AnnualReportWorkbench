@@ -71,7 +71,7 @@
         </section>
       </div>
 
-      <aside class="about-side" :style="aboutSideStyle">
+      <aside ref="aboutSideRef" class="about-side" :style="aboutSideStyle">
         <section class="surface update-card">
           <div class="update-card__copy">
             <p class="section-kicker">版本更新</p>
@@ -210,16 +210,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import rewardCodeUrl from "@/assets/wechat_reward_code.png";
 import { useAppStore } from "@/stores/app";
 
 const appStore = useAppStore();
 const about = computed(() => appStore.about);
 const aboutMainRef = ref<HTMLElement | null>(null);
+const aboutSideRef = ref<HTMLElement | null>(null);
 const syncedSideHeight = ref<number | null>(null);
 
 let aboutMainObserver: ResizeObserver | null = null;
+let aboutSideObserver: ResizeObserver | null = null;
 const handleAboutWindowResize = () => {
   syncedSideHeight.value = null;
   void nextTick(() => {
@@ -230,7 +232,6 @@ const handleAboutWindowResize = () => {
 const aboutSideStyle = computed(() => {
   if (!syncedSideHeight.value) return undefined;
   return {
-    height: `${syncedSideHeight.value}px`,
     minHeight: `${syncedSideHeight.value}px`,
   };
 });
@@ -283,15 +284,30 @@ const updateNoteText = computed(() => {
   return "这里会展示更新说明、版本检查结果以及对应的发布信息。";
 });
 
+watch(
+  [currentVersionText, updateStateText, updateChannelText, updateSourceText, updateNoteText],
+  () => {
+    syncedSideHeight.value = null;
+    void nextTick(() => {
+      syncAboutColumnsHeight({ allowShrink: true });
+    });
+  },
+  { flush: "post" },
+);
+
 function syncAboutColumnsHeight(options?: { allowShrink?: boolean }) {
   if (typeof window === "undefined") return;
   if (window.innerWidth <= 1180) {
     syncedSideHeight.value = null;
     return;
   }
-  const measuredHeight = aboutMainRef.value
+  const mainHeight = aboutMainRef.value
     ? Math.ceil(aboutMainRef.value.getBoundingClientRect().height)
     : null;
+  const sideHeight = aboutSideRef.value
+    ? Math.ceil(aboutSideRef.value.getBoundingClientRect().height)
+    : null;
+  const measuredHeight = Math.max(mainHeight || 0, sideHeight || 0);
   if (!measuredHeight) {
     syncedSideHeight.value = null;
     return;
@@ -318,6 +334,12 @@ onMounted(() => {
       });
       aboutMainObserver.observe(aboutMainRef.value);
     }
+    if (typeof ResizeObserver !== "undefined" && aboutSideRef.value) {
+      aboutSideObserver = new ResizeObserver(() => {
+        syncAboutColumnsHeight({ allowShrink: true });
+      });
+      aboutSideObserver.observe(aboutSideRef.value);
+    }
   });
 });
 
@@ -328,6 +350,8 @@ function checkUpdate() {
 onBeforeUnmount(() => {
   aboutMainObserver?.disconnect();
   aboutMainObserver = null;
+  aboutSideObserver?.disconnect();
+  aboutSideObserver = null;
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", handleAboutWindowResize);
   }
@@ -390,7 +414,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(59, 130, 246, 0.08));
   border: 1px solid var(--line);
   align-content: start;
@@ -431,7 +455,7 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 6px;
   padding: 14px 15px;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: var(--surface-muted);
   border: 1px solid var(--line);
 }
@@ -461,11 +485,11 @@ onBeforeUnmount(() => {
 .meta-link {
   display: inline-flex;
   width: 100%;
-  min-height: 38px;
+  min-height: var(--control-height-md);
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   color: #fff;
   text-decoration: none;
   background: linear-gradient(135deg, #4f8cff, #6f7cff);
@@ -487,10 +511,9 @@ onBeforeUnmount(() => {
   align-self: start;
   transform: translate3d(var(--about-side-shift), 0, 0) scale(var(--about-side-scale));
   transform-origin: top right;
-  will-change: transform, height;
+  will-change: transform, min-height;
   transition:
     transform var(--sidebar-motion-duration) var(--sidebar-motion-ease),
-    height calc(var(--sidebar-motion-duration) - 0.08s) ease,
     min-height calc(var(--sidebar-motion-duration) - 0.08s) ease;
 }
 
@@ -503,7 +526,7 @@ onBeforeUnmount(() => {
   min-height: 100%;
   overflow: hidden;
   padding: 16px 18px;
-  border-radius: 22px;
+  border-radius: var(--radius-3xl);
   background: var(--surface-muted);
   border: 1px solid var(--line);
   box-shadow: none;
@@ -540,14 +563,15 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: var(--control-height-md);
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   border: 0;
   text-decoration: none;
   cursor: pointer;
   background: linear-gradient(135deg, #4f8cff, #6f7cff);
   color: #fff;
+  font-size: var(--type-body);
   font-weight: 700;
 }
 
@@ -557,8 +581,8 @@ onBeforeUnmount(() => {
 }
 
 .update-board {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   min-height: 0;
   height: 100%;
@@ -568,8 +592,11 @@ onBeforeUnmount(() => {
 .update-card__footer {
   display: flex;
   align-items: flex-start;
+  flex: 0 0 auto;
   min-height: 0;
-  margin-top: 2px;
+  margin-top: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .update-card__copy,
@@ -599,7 +626,7 @@ onBeforeUnmount(() => {
   display: grid;
   align-content: start;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   background: var(--surface-muted);
   border: 1px solid var(--line);
   box-shadow: none;
@@ -616,15 +643,17 @@ onBeforeUnmount(() => {
 .update-note-card {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  flex: 1 1 auto;
   gap: 8px;
   padding: 12px 14px;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   border: 1px solid var(--line-strong);
   border-bottom-width: 1px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.03);
   min-height: 0;
-  height: 104px;
-  max-height: 104px;
+  height: auto;
+  min-height: var(--card-min-height-note);
+  max-height: none;
   overflow: hidden;
   background: var(--surface-muted);
   margin-bottom: 0;
@@ -654,9 +683,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 38px;
+  min-height: var(--control-height-md);
   padding: 0 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   color: var(--brand-strong);
   text-decoration: none;
   background: var(--field-bg-soft);
@@ -719,14 +748,14 @@ onBeforeUnmount(() => {
   gap: 18px;
   align-items: center;
   padding: 18px 20px;
-  border-radius: 22px;
+  border-radius: var(--radius-3xl);
   background: var(--surface-muted);
   border: 1px solid var(--line);
 }
 
 .reward-card--main {
   height: 100%;
-  min-height: 214px;
+  min-height: var(--card-min-height-xl);
   align-self: stretch;
 }
 
@@ -756,9 +785,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 34px;
+  min-height: var(--control-height-sm);
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--field-bg);
   color: var(--brand-strong);
   font-size: var(--type-body-small);
@@ -766,10 +795,10 @@ onBeforeUnmount(() => {
 }
 
 .reward-card img {
-  width: 148px;
-  height: 148px;
+  width: var(--media-size-md);
+  height: var(--media-size-md);
   object-fit: cover;
-  border-radius: 20px;
+  border-radius: var(--radius-2xl);
   background: var(--field-bg);
   box-shadow: none;
   justify-self: end;
@@ -793,14 +822,6 @@ onBeforeUnmount(() => {
   grid-column: 1 / -1;
 }
 
-.section-header--tight {
-  margin-bottom: -2px;
-}
-
-.section-header--tight h3 {
-  font-size: var(--type-section-title);
-}
-
 .step-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -815,9 +836,9 @@ onBeforeUnmount(() => {
   position: relative;
   display: grid;
   gap: 6px;
-  min-height: 120px;
+  min-height: var(--card-min-height-lg);
   padding: 16px 14px 14px;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: var(--surface-muted);
   border: 1px solid var(--line);
 }
@@ -829,8 +850,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  height: var(--control-height-sm);
+  border-radius: var(--radius-sm);
   background: var(--accent-soft);
   color: var(--brand-strong);
   font-size: var(--type-body-small);
@@ -899,6 +920,20 @@ onBeforeUnmount(() => {
 :global(body[data-theme="midnight"]) .about-page .meta-link,
 :global(body[data-theme="midnight"]) .about-page .update-button {
   box-shadow: none;
+}
+
+@media (max-width: 1320px) {
+  .about-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-card--accent {
+    grid-column: 1 / -1;
+  }
+
+  .step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1180px) {

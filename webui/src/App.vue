@@ -1,5 +1,9 @@
 <template>
-  <div class="workbench-shell" :data-sidebar-mode="appStore.sidebarMode">
+  <div
+    class="workbench-shell"
+    :data-sidebar-mode="appStore.sidebarMode"
+    :data-sidebar-phase="sidebarMotionPhase"
+  >
     <aside class="sidebar surface">
       <div class="sidebar__top">
         <div class="brand-block">
@@ -32,8 +36,15 @@
       </div>
 
       <div class="sidebar__bottom">
-        <button class="nav-item nav-item--utility" type="button" :title="themeToggleTitle" @click="toggleTheme">
-          <span class="nav-item__icon">
+        <button
+          class="nav-item nav-item--utility nav-item--theme"
+          :class="{ 'is-switching': appStore.themeTransitioning }"
+          type="button"
+          :title="themeToggleTitle"
+          :aria-busy="appStore.themeTransitioning ? 'true' : 'false'"
+          @click="toggleTheme($event)"
+        >
+          <span class="nav-item__icon nav-item__icon--theme">
             <component :is="appStore.themeMode === 'sunrise' ? MoonStar : Sunrise" :size="18" />
           </span>
           <span class="nav-item__copy">
@@ -42,12 +53,12 @@
         </button>
 
         <button
-          class="nav-item nav-item--utility"
+          class="nav-item nav-item--utility nav-item--collapse"
           type="button"
           :aria-label="isSidebarExpanded ? '折叠侧边栏' : '展开侧边栏'"
           @click="appStore.toggleSidebar()"
         >
-          <span class="nav-item__icon">
+          <span class="nav-item__icon nav-item__icon--collapse">
             <component :is="isSidebarExpanded ? PanelLeftClose : PanelLeftOpen" :size="18" />
           </span>
           <span class="nav-item__copy">
@@ -96,7 +107,7 @@
 
           <div class="progress-hero__track">
             <div class="energy-track">
-              <div class="energy-track__fill" :style="{ width: progressPercentText }">
+              <div class="energy-track__fill" :style="{ '--progress-fill-scale': progressFillScale.toFixed(4) }">
                 <span class="energy-track__glow"></span>
               </div>
             </div>
@@ -132,7 +143,9 @@
 
       <main class="content-frame">
         <Transition name="page-swap" mode="out-in">
-          <component :is="currentPage" :key="appStore.currentPage" />
+          <div class="page-swap-shell" :key="appStore.currentPage">
+            <component :is="currentPage" />
+          </div>
         </Transition>
       </main>
     </div>
@@ -140,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   FileScan,
   FileText,
@@ -173,7 +186,18 @@ const taskStore = useTaskStore();
 const nowTick = ref(Date.now());
 const mainPanelRef = ref<HTMLElement | null>(null);
 const isProgressCondensed = ref(false);
+const sidebarMotionPhase = ref<"idle" | "collapsing" | "expanding">("idle");
+const PROGRESS_CONDENSE_SCROLL_TOP = 96;
+const PROGRESS_EXPAND_SCROLL_TOP = 12;
+const PROGRESS_CONDENSE_LOCK_MS = 420;
+const SIDEBAR_MOTION_SETTLE_MS = 320;
 let elapsedTimer: number | null = null;
+let sidebarResizeFrame: number | null = null;
+let sidebarResizeTimers: number[] = [];
+let sidebarMotionTimer: number | null = null;
+let progressScrollFrame: number | null = null;
+let progressCondenseLockUntil = 0;
+let progressLastScrollTop = 0;
 
 const pageMap = {
   command: defineAsyncComponent(() => import("@/pages/CommandCenter.vue")),
@@ -252,6 +276,7 @@ const currentPage = computed(() => pageMap[appStore.currentPage]);
 const isSidebarExpanded = computed(() => appStore.sidebarMode === "expanded");
 const hasTerminalProgressState = computed(() => ["completed", "failed", "cancelled"].includes(taskStore.run.status));
 const shouldCondenseProgress = computed(() => {
+  if (taskStore.run.status === "idle") return false;
   if (hasTerminalProgressState.value) return true;
   if (!isProgressCondensed.value) return false;
   return ["running", "paused", "cancelling"].includes(taskStore.run.status);
@@ -307,6 +332,7 @@ const elapsedText = computed(() => {
 });
 
 const progressFraction = computed(() => Number(taskStore.currentTaskProgress || 0));
+const progressFillScale = computed(() => Math.min(1, Math.max(0, progressFraction.value)));
 const progressPercentText = computed(() => formatPercent(progressFraction.value));
 
 const progressHeadline = computed(() => {
@@ -345,13 +371,104 @@ const stageProgressCards = computed(() =>
 const themeToggleLabel = computed(() => (appStore.themeMode === "sunrise" ? "切换深夜" : "切换日出"));
 const themeToggleTitle = computed(() => (appStore.themeMode === "sunrise" ? "切换到深夜模式" : "切换到日出模式"));
 
-function toggleTheme() {
-  appStore.setTheme(appStore.themeMode === "sunrise" ? "midnight" : "sunrise");
+function toggleTheme(event: MouseEvent) {
+  const sourceElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  appStore.setTheme(appStore.themeMode === "sunrise" ? "midnight" : "sunrise", sourceElement);
+}
+
+function syncProgressCondensedState() {
+  const top = mainPanelRef.value?.scrollTop || 0;
+  const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+  const previousTop = progressLastScrollTop;
+  const scrollingDown = top > previousTop + 2;
+  const scrollingUp = top < previousTop - 2;
+  progressLastScrollTop = top;
+
+  const status = taskStore.run.status;
+  if (status === "idle") {
+    isProgressCondensed.value = false;
+    progressCondenseLockUntil = 0;
+    return;
+  }
+  if (hasTerminalProgressState.value) {
+    isProgressCondensed.value = true;
+    progressCondenseLockUntil = now + PROGRESS_CONDENSE_LOCK_MS;
+    return;
+  }
+  if (now < progressCondenseLockUntil) return;
+
+  const shouldCondenseNow = top >= PROGRESS_CONDENSE_SCROLL_TOP && scrollingDown;
+  const shouldExpandNow = top <= PROGRESS_EXPAND_SCROLL_TOP && scrollingUp;
+
+  if (!isProgressCondensed.value && shouldCondenseNow) {
+    isProgressCondensed.value = true;
+    progressCondenseLockUntil = now + PROGRESS_CONDENSE_LOCK_MS;
+    return;
+  }
+
+  if (isProgressCondensed.value && shouldExpandNow) {
+    isProgressCondensed.value = false;
+    progressCondenseLockUntil = now + PROGRESS_CONDENSE_LOCK_MS;
+    return;
+  }
 }
 
 function handleMainPanelScroll() {
-  const top = mainPanelRef.value?.scrollTop || 0;
-  isProgressCondensed.value = top > 24;
+  if (progressScrollFrame !== null || typeof window === "undefined") return;
+  progressScrollFrame = window.requestAnimationFrame(() => {
+    syncProgressCondensedState();
+    progressScrollFrame = null;
+  });
+}
+
+function emitLayoutResize() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("resize"));
+}
+
+function clearSidebarResizeTasks() {
+  if (sidebarResizeFrame !== null) {
+    window.cancelAnimationFrame(sidebarResizeFrame);
+    sidebarResizeFrame = null;
+  }
+  if (sidebarResizeTimers.length) {
+    sidebarResizeTimers.forEach((timer) => window.clearTimeout(timer));
+    sidebarResizeTimers = [];
+  }
+}
+
+function clearSidebarMotionTask() {
+  if (sidebarMotionTimer !== null) {
+    window.clearTimeout(sidebarMotionTimer);
+    sidebarMotionTimer = null;
+  }
+}
+
+function startSidebarMotionPhase(mode: "expanded" | "collapsed") {
+  if (typeof window === "undefined") return;
+  clearSidebarMotionTask();
+  sidebarMotionPhase.value = mode === "collapsed" ? "collapsing" : "expanding";
+  sidebarMotionTimer = window.setTimeout(() => {
+    sidebarMotionPhase.value = "idle";
+    sidebarMotionTimer = null;
+  }, SIDEBAR_MOTION_SETTLE_MS);
+}
+
+function scheduleSidebarResize() {
+  if (typeof window === "undefined") return;
+  clearSidebarResizeTasks();
+  nextTick(() => {
+    emitLayoutResize();
+    sidebarResizeFrame = window.requestAnimationFrame(() => {
+      emitLayoutResize();
+      sidebarResizeFrame = null;
+    });
+    sidebarResizeTimers = [460].map((delay) =>
+      window.setTimeout(() => {
+        emitLayoutResize();
+      }, delay),
+    );
+  });
 }
 
 watch(
@@ -381,6 +498,32 @@ watch(
     }
     historyStore.stopAutoRefresh();
     historyStore.load().catch(() => {});
+  },
+  { immediate: true },
+);
+
+watch(
+  () => appStore.sidebarMode,
+  (mode) => {
+    startSidebarMotionPhase(mode);
+    scheduleSidebarResize();
+  },
+);
+
+watch(
+  () => taskStore.run.status,
+  (status, previousStatus) => {
+    const enteringActiveRun = ["running", "paused", "cancelling"].includes(status)
+      && !["running", "paused", "cancelling"].includes(String(previousStatus || ""));
+    if (enteringActiveRun) {
+      const top = mainPanelRef.value?.scrollTop || 0;
+      progressLastScrollTop = top;
+      if (top <= PROGRESS_EXPAND_SCROLL_TOP) {
+        isProgressCondensed.value = false;
+        progressCondenseLockUntil = 0;
+      }
+    }
+    syncProgressCondensedState();
   },
   { immediate: true },
 );
@@ -432,6 +575,9 @@ onMounted(async () => {
       appStore.autoCheckUpdate().catch(() => {}),
     ]);
     appStore.bridgeReady = true;
+    await nextTick();
+    progressLastScrollTop = mainPanelRef.value?.scrollTop || 0;
+    syncProgressCondensedState();
   } catch (error) {
     appStore.bridgeReady = false;
     appStore.showAlert(getErrorMessage(error, "桥接初始化失败"), "error");
@@ -440,6 +586,13 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   historyStore.stopAutoRefresh();
+  clearSidebarResizeTasks();
+  clearSidebarMotionTask();
+  if (progressScrollFrame !== null) {
+    window.cancelAnimationFrame(progressScrollFrame);
+    progressScrollFrame = null;
+  }
+  progressCondenseLockUntil = 0;
   if (elapsedTimer !== null) {
     window.clearInterval(elapsedTimer);
     elapsedTimer = null;

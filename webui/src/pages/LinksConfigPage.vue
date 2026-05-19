@@ -1,6 +1,6 @@
 <template>
   <section class="editor-page" v-if="settings">
-    <header class="editor-head">
+    <header class="editor-head surface">
       <div class="editor-copy">
         <p class="section-kicker">链接阶段</p>
         <h2>公告链接抓取</h2>
@@ -130,96 +130,14 @@ function ensureMarketScopes() {
 
 <style scoped>
 .editor-page {
-  display: grid;
-  gap: 14px;
-}
-
-.editor-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-}
-
-.editor-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.editor-head h2 {
-  margin: 0;
-  font-size: var(--type-page-title);
-  line-height: 1.12;
-}
-
-.editor-head p:last-child {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.5;
-  max-width: 720px;
-  font-size: var(--type-body);
-}
-
-.save-button {
-  border: 0;
-  border-radius: 999px;
-  min-height: 40px;
-  padding: 0 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #0f766e, #155e75);
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.config-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.config-card {
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
-.section-header--tight {
-  margin-bottom: -2px;
+  --config-grid-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
+  --config-side-card-min-height: clamp(300px, 33vh, 340px);
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-}
-
-.field {
-  display: grid;
-  gap: 8px;
-}
-
-.field span {
-  font-size: var(--type-body-small);
-  color: var(--muted);
-}
-
-.field input {
-  width: 100%;
-  min-height: 40px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--field-bg);
-  color: var(--field-text);
-}
-
-.field input::placeholder {
-  color: var(--field-placeholder);
 }
 
 .checkbox-group {
@@ -231,12 +149,13 @@ function ensureMarketScopes() {
 .checkbox-card {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: start;
-  padding: 12px 14px;
-  border-radius: 16px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: var(--panel-alt);
+  background: var(--surface-strong);
+  box-shadow: none;
 }
 
 .checkbox-card strong {
@@ -260,11 +179,12 @@ function ensureMarketScopes() {
 .toggle-row {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: start;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: var(--panel-alt);
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-muted);
 }
 
 .toggle-row strong {
@@ -290,7 +210,7 @@ function ensureMarketScopes() {
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
   background: var(--field-bg-soft);
 }
@@ -312,13 +232,13 @@ function ensureMarketScopes() {
   line-height: 1.45;
 }
 
-@media (max-width: 1180px) {
-  .editor-head {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 1320px) {
+  .checkbox-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .config-grid,
+@media (max-width: 1180px) {
   .checkbox-group,
   .form-grid,
   .note-grid {

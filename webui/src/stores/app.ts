@@ -8,7 +8,7 @@ export type SidebarMode = "expanded" | "collapsed";
 
 const UI_PREFS_KEY = "report_spider_ui_prefs_v1";
 const THEME_TRANSITION_CLASS = "theme-transitioning";
-const THEME_TRANSITION_DURATION_MS = 420;
+const THEME_TRANSITION_DURATION_MS = 440;
 
 let notificationModulePromise: Promise<typeof import("element-plus/es/components/notification/index")> | null = null;
 let messageBoxModulePromise: Promise<typeof import("element-plus/es/components/message-box/index")> | null = null;
@@ -22,6 +22,39 @@ type DocumentWithViewTransition = Document & {
   startViewTransition?: (callback: () => void | Promise<void>) => ViewTransitionController;
 };
 
+function applyThemeTransitionOrigin(sourceElement?: HTMLElement | null) {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+
+  const root = document.documentElement;
+  const fallbackX = window.innerWidth * 0.5;
+  const fallbackY = window.innerHeight * 0.28;
+  const rect = sourceElement?.getBoundingClientRect();
+  const originX = rect ? rect.left + rect.width / 2 : fallbackX;
+  const originY = rect ? rect.top + rect.height / 2 : fallbackY;
+  const radius = Math.hypot(
+    Math.max(originX, window.innerWidth - originX),
+    Math.max(originY, window.innerHeight - originY),
+  );
+
+  root.style.setProperty("--theme-transition-origin-x", `${originX.toFixed(1)}px`);
+  root.style.setProperty("--theme-transition-origin-y", `${originY.toFixed(1)}px`);
+  root.style.setProperty("--theme-transition-radius", `${Math.ceil(radius)}px`);
+  root.style.setProperty("--theme-transition-radius-soft", `${Math.ceil(radius * 0.72)}px`);
+}
+
+function applyThemeTransitionPalette(targetMode: ThemeMode) {
+  if (typeof document === "undefined") return;
+
+  const root = document.documentElement;
+  if (targetMode === "midnight") {
+    root.style.setProperty("--theme-transition-core", "rgba(56, 189, 248, 0.1)");
+    root.style.setProperty("--theme-transition-glow", "rgba(34, 211, 238, 0.035)");
+  } else {
+    root.style.setProperty("--theme-transition-core", "rgba(251, 146, 60, 0.09)");
+    root.style.setProperty("--theme-transition-glow", "rgba(245, 158, 11, 0.03)");
+  }
+}
+
 function loadNotificationModule() {
   notificationModulePromise ||= import("element-plus/es/components/notification/index");
   return notificationModulePromise;
@@ -32,18 +65,18 @@ function loadMessageBoxModule() {
   return messageBoxModulePromise;
 }
 
-function markThemeTransition(active: boolean) {
+function markThemeTransition(active: boolean, targetMode?: ThemeMode) {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle(THEME_TRANSITION_CLASS, active);
+  const root = document.documentElement;
+  root.classList.toggle(THEME_TRANSITION_CLASS, active);
+  if (active && targetMode) {
+    root.dataset.themeTransitionTarget = targetMode;
+  } else {
+    delete root.dataset.themeTransitionTarget;
+  }
   if (themeTransitionTimer !== null) {
     window.clearTimeout(themeTransitionTimer);
     themeTransitionTimer = null;
-  }
-  if (active) {
-    themeTransitionTimer = window.setTimeout(() => {
-      document.documentElement.classList.remove(THEME_TRANSITION_CLASS);
-      themeTransitionTimer = null;
-    }, THEME_TRANSITION_DURATION_MS + 80);
   }
 }
 
@@ -54,6 +87,7 @@ export const useAppStore = defineStore("app", {
     sidebarMode: "expanded" as SidebarMode,
     bridgeReady: false,
     loading: false,
+    themeTransitioning: false,
     about: null as Record<string, any> | null,
     updateChecking: false,
     updateInfo: null as UpdateCheckResult | null,
@@ -98,7 +132,7 @@ export const useAppStore = defineStore("app", {
     setPage(page: PageKey) {
       this.currentPage = page;
     },
-    setTheme(mode: ThemeMode) {
+    setTheme(mode: ThemeMode, sourceElement?: HTMLElement | null) {
       if (this.themeMode === mode) return;
       const commitTheme = () => {
         this.themeMode = mode;
@@ -117,19 +151,33 @@ export const useAppStore = defineStore("app", {
         return;
       }
 
+      applyThemeTransitionOrigin(sourceElement);
+      applyThemeTransitionPalette(mode);
+
+      const finishTransition = () => {
+        this.themeTransitioning = false;
+        markThemeTransition(false);
+      };
+
       const transitionHost = document as DocumentWithViewTransition;
       if (transitionHost.startViewTransition) {
-        markThemeTransition(true);
+        this.themeTransitioning = true;
+        markThemeTransition(true, mode);
         transitionHost.startViewTransition(() => {
           commitTheme();
         }).finished.finally(() => {
-          markThemeTransition(false);
+          finishTransition();
         });
         return;
       }
 
-      markThemeTransition(true);
+      this.themeTransitioning = true;
+      markThemeTransition(true, mode);
       commitTheme();
+      themeTransitionTimer = window.setTimeout(() => {
+        finishTransition();
+        themeTransitionTimer = null;
+      }, THEME_TRANSITION_DURATION_MS + 80);
     },
     setSidebarMode(mode: SidebarMode) {
       this.sidebarMode = mode;
@@ -187,12 +235,16 @@ export const useAppStore = defineStore("app", {
       cancelText?: string;
     }) {
       const { ElMessageBox } = await loadMessageBoxModule();
+      const dialogType = payload.type || "warning";
       await ElMessageBox.confirm(payload.message, payload.title, {
-        type: payload.type || "warning",
+        type: dialogType,
         confirmButtonText: payload.confirmText || "确认",
         cancelButtonText: payload.cancelText || "取消",
         distinguishCancelAndClose: true,
         closeOnClickModal: false,
+        showClose: false,
+        modalClass: "app-confirm-overlay",
+        customClass: `app-confirm-dialog app-confirm-dialog--${dialogType}`,
       });
     },
   },
