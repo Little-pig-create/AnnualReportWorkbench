@@ -110,3 +110,14 @@ def app_close_requested(run_id: str | None, status: str | None = None) -> dict[s
             "status": status,
         },
     }
+
+
+def window_state_changed(state: str) -> dict[str, Any]:
+    return {
+        "event": "window.state_changed",
+        "runId": None,
+        "timestamp": int(time()),
+        "data": {
+            "state": state,
+        },
+    }

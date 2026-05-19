@@ -7,7 +7,9 @@
     <aside class="sidebar surface">
       <div class="sidebar__top">
         <div class="brand-block">
-          <div class="brand-block__icon">AR</div>
+          <div class="brand-block__icon">
+            <img :src="sidebarLogoUrl" alt="AR" class="brand-block__logo" />
+          </div>
           <p class="brand-block__eyebrow">ANNUAL REPORT WORKBENCH</p>
           <h1 class="brand-block__title">年报工作台</h1>
         </div>
@@ -21,8 +23,8 @@
             :key="item.key"
             class="nav-item"
             :class="{ active: appStore.currentPage === item.key }"
-            :title="item.label"
             type="button"
+            :title="item.label"
             @click="appStore.setPage(item.key)"
           >
             <span class="nav-item__icon">
@@ -168,6 +170,7 @@ import {
   Sunrise,
   Terminal,
 } from "@lucide/vue";
+import sidebarLogoUrl from "@/assets/annual_report_spider.png";
 import { bridge } from "@/services/bridge";
 import { formatDateTime, formatDuration, formatElapsed } from "@/services/datetime";
 import { getErrorMessage } from "@/services/errors";

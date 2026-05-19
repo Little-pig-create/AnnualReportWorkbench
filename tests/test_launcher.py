@@ -45,6 +45,5 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(spec.min_size, (1024, 768))
         self.assertTrue(spec.maximized)
 
-
 if __name__ == "__main__":
     unittest.main()

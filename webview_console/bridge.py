@@ -69,3 +69,21 @@ class Bridge:
 
     def cancel_close_window_request(self) -> dict[str, Any]:
         return self._runtime.cancel_close_window_request()
+
+    def minimize_window(self) -> dict[str, Any]:
+        return self._runtime.minimize_window()
+
+    def maximize_window(self) -> dict[str, Any]:
+        return self._runtime.maximize_window()
+
+    def restore_window(self) -> dict[str, Any]:
+        return self._runtime.restore_window()
+
+    def get_window_state(self) -> dict[str, Any]:
+        return self._runtime.get_window_state()
+
+    def get_window_bounds(self) -> dict[str, Any]:
+        return self._runtime.get_window_bounds()
+
+    def resize_window(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._runtime.resize_window(payload)

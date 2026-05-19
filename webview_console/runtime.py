@@ -30,6 +30,7 @@ from .settings import AppSettings
 from .services import IncrementalStatusService
 from .services import UpdateService
 from .worker import ExecutionWorker
+from webview.window import FixPoint
 
 
 class Runtime:
@@ -296,6 +297,92 @@ class Runtime:
         with self._lock:
             self._close_request_pending = False
         return self._ok({"cancelled": True})
+
+    def minimize_window(self) -> dict[str, Any]:
+        window = self._window
+        if window is None:
+            return self._error(INTERNAL_ERROR, "window is not ready")
+        try:
+            window.minimize()
+        except Exception as exc:
+            return self._error(INTERNAL_ERROR, str(exc))
+        return self._ok({"state": "minimized"})
+
+    def maximize_window(self) -> dict[str, Any]:
+        window = self._window
+        if window is None:
+            return self._error(INTERNAL_ERROR, "window is not ready")
+        try:
+            window.maximize()
+        except Exception as exc:
+            return self._error(INTERNAL_ERROR, str(exc))
+        return self._ok({"state": "maximized"})
+
+    def restore_window(self) -> dict[str, Any]:
+        window = self._window
+        if window is None:
+            return self._error(INTERNAL_ERROR, "window is not ready")
+        try:
+            window.restore()
+        except Exception as exc:
+            return self._error(INTERNAL_ERROR, str(exc))
+        return self._ok({"state": "normal"})
+
+    def get_window_state(self) -> dict[str, Any]:
+        window = self._window
+        native = getattr(window, "native", None) if window is not None else None
+        if window is None or native is None:
+            return self._ok({"state": "normal"})
+        try:
+            state_name = str(native.WindowState).lower()
+            if "max" in state_name:
+                return self._ok({"state": "maximized"})
+            if "min" in state_name:
+                return self._ok({"state": "minimized"})
+        except Exception:
+            pass
+        return self._ok({"state": "normal"})
+
+    def get_window_bounds(self) -> dict[str, Any]:
+        window = self._window
+        if window is None:
+            return self._error(INTERNAL_ERROR, "window is not ready")
+        try:
+            min_width, min_height = getattr(window, "min_size", (1280, 820))
+            return self._ok({
+                "x": int(window.x),
+                "y": int(window.y),
+                "width": int(window.width),
+                "height": int(window.height),
+                "minWidth": int(min_width),
+                "minHeight": int(min_height),
+                "state": self.get_window_state()["data"]["state"],
+            })
+        except Exception as exc:
+            return self._error(INTERNAL_ERROR, str(exc))
+
+    def resize_window(self, payload: dict[str, Any]) -> dict[str, Any]:
+        window = self._window
+        if window is None:
+            return self._error(INTERNAL_ERROR, "window is not ready")
+        try:
+            width = max(1, int(payload.get("width", 0)))
+            height = max(1, int(payload.get("height", 0)))
+            fix_point = FixPoint(0)
+            if bool(payload.get("fixNorth")):
+                fix_point |= FixPoint.NORTH
+            if bool(payload.get("fixSouth")):
+                fix_point |= FixPoint.SOUTH
+            if bool(payload.get("fixWest")):
+                fix_point |= FixPoint.WEST
+            if bool(payload.get("fixEast")):
+                fix_point |= FixPoint.EAST
+            if fix_point == FixPoint(0):
+                fix_point = FixPoint.NORTH | FixPoint.WEST
+            window.resize(width, height, fix_point)
+            return self._ok({"width": width, "height": height})
+        except Exception as exc:
+            return self._error(INTERNAL_ERROR, str(exc))
 
     def _finalize_active_run_for_window_close(self) -> None:
         with self._lock:

@@ -8,7 +8,7 @@
     "优化桌面端前端入口解析、小屏窗口尺寸适配与任务进度栏展开回退逻辑，降低发布版误连本地开发服务和界面状态残留的风险"
   ],
   "force": false,
-  "sha256": "6d14e25863f91c95b78785c27c145a98263e6b1d0164aa1981774a43981f7d00",
+  "sha256": "cc0f330da27dad216cc1fb6ce6d12729020658941b3e41890faffd33185dbb59",
   "downloadUrl": "https://github.com/Little-pig-create/AnnualReportWorkbench/releases/download/1.0.4/AnnualReportWorkbench-Setup-1.0.4-onedir.exe",
   "primaryChannel": "github",
   "downloads": {

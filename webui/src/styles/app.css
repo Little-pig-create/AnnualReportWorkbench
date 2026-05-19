@@ -133,16 +133,23 @@
   border-radius: var(--radius-lg);
   background: var(--accent);
   color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.04em;
   box-shadow: none;
   box-sizing: border-box;
+  overflow: hidden;
   transform: translateZ(0);
   will-change: auto;
   transition:
     border-radius var(--sidebar-motion-duration-fast) ease,
     box-shadow var(--sidebar-motion-duration-fast) ease,
     background var(--sidebar-motion-duration-fast) ease;
+}
+
+.brand-block__logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .brand-block__eyebrow {

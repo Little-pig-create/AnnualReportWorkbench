@@ -285,11 +285,13 @@ import StageCard from "@/components/StageCard.vue";
 import { formatDateTime } from "@/services/datetime";
 import { getErrorMessage } from "@/services/errors";
 import { useAppStore } from "@/stores/app";
+import { useSettingsStore } from "@/stores/settings";
 import { useTaskStore } from "@/stores/task";
 import type { RunMode } from "@/services/types";
 
 const taskStore = useTaskStore();
 const appStore = useAppStore();
+const settingsStore = useSettingsStore();
 const displayedProgress = ref(0);
 const pdfView = ref<"stacked" | "trend">("stacked");
 const extractView = ref<"stacked" | "trend">("stacked");
@@ -569,6 +571,22 @@ function compactValueLabel(position: "inside" | "insideTop" | "top" = "insideTop
   };
 }
 
+function filterBucketsByConfiguredYears<T extends { year?: number | string }>(buckets: T[]) {
+  const startYear = Number(
+    settingsStore.data?.workspace.startYear ?? taskStore.visualizationIndex?.meta?.startYear ?? NaN,
+  );
+  const endYear = Number(
+    settingsStore.data?.workspace.endYear ?? taskStore.visualizationIndex?.meta?.endYear ?? NaN,
+  );
+  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || startYear > endYear) {
+    return buckets;
+  }
+  return buckets.filter((item) => {
+    const year = Number(item?.year);
+    return Number.isFinite(year) && year >= startYear && year <= endYear;
+  });
+}
+
 async function start(mode: RunMode) {
   const modeText = {
     links: "公告链接抓取",
@@ -653,10 +671,12 @@ const outputDirLabel = computed(() => {
   return outputs.annualReportDir || "-";
 });
 
-const resolvedLiveYearBuckets = computed(() => taskStore.liveYearBuckets || []);
-const resolvedLiveTotal = computed(() => taskStore.liveYearTotal || 0);
-const livePdfBuckets = computed(() => taskStore.livePdf?.yearBuckets || []);
-const liveExtractBuckets = computed(() => taskStore.liveExtract?.yearBuckets || []);
+const resolvedLiveYearBuckets = computed(() => filterBucketsByConfiguredYears(taskStore.liveYearBuckets || []));
+const resolvedLiveTotal = computed(() =>
+  resolvedLiveYearBuckets.value.reduce((sum: number, item: any) => sum + Number(item.count || item.total || 0), 0),
+);
+const livePdfBuckets = computed(() => filterBucketsByConfiguredYears(taskStore.livePdf?.yearBuckets || []));
+const liveExtractBuckets = computed(() => filterBucketsByConfiguredYears(taskStore.liveExtract?.yearBuckets || []));
 
 const liveCrawlLabel = computed(() => {
   if (taskStore.run.status === "paused") return "任务已暂停";
@@ -853,7 +873,7 @@ const pdfOption = computed(() => {
     },
     series: [
       {
-        name: "宸插畬鎴愶紙涓嬭浇+宸插瓨鍦級",
+        name: "已完成（下载+已存在）",
         type: "bar",
         stack: "pdf",
         barWidth: 24,

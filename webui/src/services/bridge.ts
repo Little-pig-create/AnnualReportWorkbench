@@ -32,6 +32,12 @@ const REQUIRED_METHODS = [
   "export_run_history",
   "confirm_close_window",
   "cancel_close_window_request",
+  "minimize_window",
+  "maximize_window",
+  "restore_window",
+  "get_window_state",
+  "get_window_bounds",
+  "resize_window",
 ] as const;
 
 function hasRequiredMethods(candidate: Record<string, any> | undefined): boolean {
